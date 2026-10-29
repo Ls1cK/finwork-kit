@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "types": ["node", "vite/client"],
+    "baseUrl": ".",
+    "paths": {
+      "finwork-kit/chat/core-sse": ["src/chat/core-sse/index.ts"],
+      "finwork-kit/chat/core-detail": ["src/chat/core-detail/index.ts"],
+      "finwork-kit/chat/ui": ["src/chat/ui/index.ts"]
+    }
+  },
+  "include": ["src", "demo/src", "config", "vite.*.config.ts", ".dumirc.ts"],
+  "exclude": ["node_modules", "dist", "demo-dist", "site-dist", ".dumi"]
+}

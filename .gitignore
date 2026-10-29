@@ -1,0 +1,32 @@
+# Dependencies and generated output
+node_modules/
+.pnpm-store/
+/dist/
+/demo-dist/
+/site-dist/
+/.dumi/tmp*/
+/.umi/
+/.umi-production/
+.cache/
+coverage/
+*.tsbuildinfo
+*.tgz
+
+# Local configuration and injected credentials
+.env
+.env.*
+!.env.example
+.npmrc
+!.npmrc.example
+
+# Local logs and editor state
+*.log
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# pnpm-lock.yaml is the project's committed lockfile
+package-lock.json
+yarn.lock
