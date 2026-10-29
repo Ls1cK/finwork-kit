@@ -41,4 +41,4 @@
 - For package changes, check npm tarball contents and an external consumer; source-alias demos do not prove package compatibility.
 - Local development commands may be started when required to verify this scaffold; do not open browsers or perform browser automation unless explicitly requested.
 - Do not report HTTP/startup/static-render checks as browser interaction validation.
-- Record untested environments and failures in VALIDATION.md. Never claim internal registry/pipeline compatibility from public-registry testing.
+- Report validation results, failures and untested environments in the delivery summary. Never claim internal registry/pipeline compatibility from public-registry testing.

@@ -7,7 +7,7 @@ FinWork 可复用能力库。一个仓库、一个 npm 包，以业务子入口�
 - pnpm 8.12.1；依赖版本固定在 package.json 和 pnpm-lock.yaml。
 - Demo：Vite 6.4.3 + React 18.3.1 + TypeScript 5.9.3。
 - 文档站：dumi 2.4.21。
-- 内网目标 Node 版本待确认；本地验证环境与结果见 VALIDATION.md。
+- 本地已验证 Node 25.7.0；其他 Node 版本尚未验证。
 
 ## 入口
 
@@ -60,16 +60,14 @@ Demo/文档站开发可使用源码 alias；生产构建和外部项目消费使
 
 先在本项目执行 pnpm build:lib，再执行 npm link。在 npm 管理的消费方执行 npm link finwork-kit，并从上述公开子入口导入。不要导入 src 或 dist 深路径。
 
-pnpm 管理的消费方应单独验证其包管理器的本地 link 流程，避免直接混用 npm 改写 pnpm 安装结构。本次离线混用测试触发过 npm 重新解析依赖；pnpm link 还提示重装源项目依赖，该步骤没有强制执行。当前通过的基准是独立 npm 消费者，详见 VALIDATION.md。
+当前已验证独立 npm 消费者的 link 导入、类型检查、UI 静态渲染和 Vite 构建。pnpm 管理的消费方应单独验证其包管理器的本地 link 流程，避免直接混用 npm 改写 pnpm 安装结构。
 
 外部联调时，分别在两个终端运行 pnpm dev:lib、pnpm dev:types，监听 JS/CSS 和声明。首次使用先执行完整 build。watch 模式不清理 dist；完整 build 会重建目录，运行 watch 时不要交叉执行完整 build。
 
 React/react-dom 是外部 peer，但 symlink 可能让开发依赖产生重复 React。Vite 消费者应配置 resolve.dedupe 为 react、react-dom；其他构建器需要相应的单实例解析配置。不要未经验证统一开启 preserveSymlinks。
 
-link 与 tarball 消费是不同验收项；详细环境、实际通过项和清理说明记录在 VALIDATION.md。本阶段不执行 npm publish。
+link 与 tarball 消费是不同验收项；当前两种方式均已通过独立 npm 消费者的导入、类型检查、UI 静态渲染和 Vite 构建。本阶段不执行 npm publish。
 
 ## 实施与协作
 
-- IMPLEMENTATION.md：第一阶段的文件职责、实现步骤和验收边界。
 - AGENTS.md：仓库约束及后续自动化协作规则。
-- VALIDATION.md：实际执行过的验证与未验证事项。
