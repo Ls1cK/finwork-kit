@@ -13,11 +13,11 @@
     "types": ["node", "vite/client"],
     "baseUrl": ".",
     "paths": {
-      "finwork-kit/chat/core-sse": ["src/chat/core-sse/index.ts"],
-      "finwork-kit/chat/core-detail": ["src/chat/core-detail/index.ts"],
-      "finwork-kit/chat/ui": ["src/chat/ui/index.ts"]
+      "@lz19.02/finwork-kit/chat/core-sse": ["src/chat/core-sse/index.ts"],
+      "@lz19.02/finwork-kit/chat/core-detail": ["src/chat/core-detail/index.ts"],
+      "@lz19.02/finwork-kit/chat/ui": ["src/chat/ui/index.ts"]
     }
   },
-  "include": ["src", "demo/src", "config", "vite.*.config.ts", ".dumirc.ts"],
-  "exclude": ["node_modules", "dist", "demo-dist", "site-dist", ".dumi"]
+  "include": ["src", "docs", "config", "vite.lib.config.ts", ".dumirc.ts"],
+  "exclude": ["node_modules", "dist", "site-dist", ".dumi"]
 }

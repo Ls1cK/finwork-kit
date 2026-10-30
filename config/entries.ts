@@ -10,7 +10,7 @@ export const libraryEntries = {
 
 export const sourceAliases = {
   ...Object.fromEntries(
-    Object.entries(libraryEntries).map(([entry, source]) => ['finwork-kit/' + entry, source]),
+    Object.entries(libraryEntries).map(([entry, source]) => ['@lz19.02/finwork-kit/' + entry, source]),
   ),
-  'finwork-kit/chat/style.css': resolve(projectRoot, 'src/chat/ui/styles.module.less'),
+  '@lz19.02/finwork-kit/chat/style.css': resolve(projectRoot, 'src/chat/ui/styles.module.less'),
 };

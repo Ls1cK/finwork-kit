@@ -2,17 +2,19 @@
 
 ## Project scope
 
-- FinWork Kit is one npm package named finwork-kit. It is not a workspace or monorepo.
+- FinWork Kit is one npm package named @lz19.02/finwork-kit. It is not a workspace or monorepo.
+- This repository maintains two deliverables: the npm library (UI, Agent detail and SSE tools) and its dumi documentation site.
 - First-stage public entries are chat/core-sse, chat/core-detail, chat/ui and chat/style.css.
 - Current functions and UI are scaffolding examples, not production SSE/detail/chat implementations.
 - Future capabilities belong under their own domain namespace; do not aggregate UI into pure core entries.
 
 ## Source boundaries
 
-- Library code belongs in src/. Core must not import React, DOM, CSS, application stores or demo/docs code.
+- Library code belongs in src/. Core must not import React, DOM, CSS, application stores or docs code.
 - UI consumes explicit props and callbacks. Do not add FinPlus services, routes, storage, analytics SDKs or business state.
-- Demo belongs in demo/. Documentation, site examples and site assets belong in docs/.
-- Keep library, demo and documentation build configuration and output separate.
+- Documentation, usage examples and site assets belong in docs/. Do not create a separate demo app.
+- Usage examples remain placeholders until Kit development and FinPlus migration tests are complete; then use the actual FinPlus integration as the example.
+- Keep library and documentation build configuration and output separate.
 - Documentation and AGENTS.md are versioned source. Generated site files, caches and credentials are not.
 
 ## Development rules
@@ -28,8 +30,8 @@
 ## Build and delivery contracts
 
 - pnpm build / pnpm build:lib builds only the npm library into dist/.
-- pnpm docs:build builds library prerequisites and the documentation site; deploy only site-dist/.
-- pnpm demo:build builds library prerequisites and the demo; deploy only demo-dist/.
+- pnpm docs:build builds only the documentation site into site-dist/; it must not require, clean or rebuild dist/.
+- Documentation uses public library imports mapped to src/ in both development and production builds. Only docs may depend on library code; library builds must not read docs or load dumi configuration.
 - Configure npm publishing and static-site deployment in separate external pipelines.
 - Do not add a publishing registry, token, release workflow or deployment workflow without an actual platform contract.
 - Do not infer publishing behavior from another project. README.md is the source of truth for build commands and artifact directories.

@@ -9,5 +9,5 @@
     "paths": {}
   },
   "include": ["src"],
-  "exclude": ["node_modules", "demo", "docs", "dist", "demo-dist", "site-dist", ".dumi"]
+  "exclude": ["node_modules", "docs", "dist", "site-dist", ".dumi"]
 }

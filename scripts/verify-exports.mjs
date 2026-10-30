@@ -16,9 +16,9 @@ for (const [name, target] of Object.entries(manifest.exports)) {
   }
 }
 
-const { testCoreSse } = await import('finwork-kit/chat/core-sse');
-const { testCoreDetail } = await import('finwork-kit/chat/core-detail');
-const { ChatExample } = await import('finwork-kit/chat/ui');
+const { testCoreSse } = await import('@lz19.02/finwork-kit/chat/core-sse');
+const { testCoreDetail } = await import('@lz19.02/finwork-kit/chat/core-detail');
+const { ChatExample } = await import('@lz19.02/finwork-kit/chat/ui');
 assert.equal(testCoreSse(), 'core-sse:ok');
 assert.equal(testCoreDetail(), 'core-detail:ok');
 assert.match(renderToStaticMarkup(createElement(ChatExample, { title: 'Consumer UI' })), /Consumer UI/);

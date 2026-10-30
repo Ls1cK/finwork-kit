@@ -6,7 +6,7 @@ export default defineConfig({
   themeConfig: { name: 'FinWork Kit' },
   resolve: { docDirs: ['docs'], atomDirs: [] },
   autoAlias: false,
-  alias: process.env.NODE_ENV === 'production' ? {} : sourceAliases,
+  alias: sourceAliases,
   outputPath: 'site-dist',
   mfsu: false,
 });

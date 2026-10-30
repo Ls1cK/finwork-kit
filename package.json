@@ -1,5 +1,5 @@
 {
-  "name": "finwork-kit",
+  "name": "@lz19.02/finwork-kit",
   "version": "0.0.1",
   "description": "Reusable FinWork capabilities",
   "type": "module",
@@ -22,16 +22,13 @@
     "./chat/style.css": "./dist/chat-ui.css"
   },
   "scripts": {
-    "dev": "pnpm demo:dev",
+    "dev": "pnpm docs:dev",
     "build": "pnpm build:lib",
     "build:lib": "vite build --config vite.lib.config.ts && tsc -p tsconfig.build.json",
     "dev:lib": "vite build --config vite.lib.config.ts --watch",
     "dev:types": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
-    "demo:dev": "vite --config vite.demo.config.ts",
-    "demo:build": "pnpm build:lib && vite build --config vite.demo.config.ts",
-    "demo:preview": "vite preview --config vite.demo.config.ts",
     "docs:dev": "dumi dev",
-    "docs:build": "pnpm build:lib && dumi build",
+    "docs:build": "dumi build",
     "docs:preview": "vite preview --outDir site-dist --port 4174",
     "typecheck": "tsc --noEmit",
     "verify:exports": "node scripts/verify-exports.mjs",
@@ -50,7 +47,6 @@
     "@types/node": "22.12.0",
     "@types/react": "18.3.31",
     "@types/react-dom": "18.3.7",
-    "@vitejs/plugin-react": "4.7.0",
     "dumi": "2.4.21",
     "less": "4.6.7",
     "react": "18.3.1",
