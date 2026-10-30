@@ -11,11 +11,10 @@
     "resolveJsonModule": true,
     "noEmit": true,
     "types": ["node", "vite/client"],
-    "baseUrl": ".",
     "paths": {
-      "@lz19.02/finwork-kit/chat/core-sse": ["src/chat/core-sse/index.ts"],
-      "@lz19.02/finwork-kit/chat/core-detail": ["src/chat/core-detail/index.ts"],
-      "@lz19.02/finwork-kit/chat/ui": ["src/chat/ui/index.ts"]
+      "@lz19.02/finwork-kit/chat/core-sse": ["./src/chat/core-sse/index.ts"],
+      "@lz19.02/finwork-kit/chat/core-detail": ["./src/chat/core-detail/index.ts"],
+      "@lz19.02/finwork-kit/chat/ui": ["./src/chat/ui/index.ts"]
     }
   },
   "include": ["src", "docs", "config", "vite.lib.config.ts", ".dumirc.ts"],
