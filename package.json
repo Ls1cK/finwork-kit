@@ -43,6 +43,13 @@
     "react": { "optional": true },
     "react-dom": { "optional": true }
   },
+  "pnpm": {
+    "overrides": {
+      "umi": "4.4.11",
+      "@umijs/bundler-vite>vite@4": "6.4.3",
+      "@umijs/bundler-vite>@vitejs/plugin-react@4.0.0": "4.3.4"
+    }
+  },
   "devDependencies": {
     "@types/node": "22.12.0",
     "@types/react": "18.3.31",
