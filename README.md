@@ -5,7 +5,7 @@ FinWork 可复用能力库，npm 包名为 `@lz19.02/finwork-kit`。一个仓库
 - npm 库：提供 UI 组件、处理 FinWork Agent 历史数据的 core-detail 与流式数据的 core-sse，以业务子入口扩展。
 - dumi 文档站：维护组件与 core 工具函数的介绍、API 和使用案例。
 
-当前仅完成项目骨架，尚未实现真实 SSE、历史解析或聊天 UI。文档与使用案例先保留占位，后续以经过迁移测试的 FinPlus 实际接入代码补充。
+当前已提供项目骨架、源码依赖护栏及可重复的包消费检查，尚未实现真实 SSE、历史解析或聊天 UI。文档与使用案例先保留占位，后续以经过迁移测试的 FinPlus 实际接入代码补充。
 
 ## 代码与构建边界
 
@@ -19,7 +19,7 @@ FinWork 可复用能力库，npm 包名为 `@lz19.02/finwork-kit`。一个仓库
 - pnpm 8.12.1；依赖版本固定在 package.json 和 pnpm-lock.yaml。
 - 库构建：Vite 6.4.3 + React 18.3.1 + TypeScript 5.9.3。
 - 文档站：dumi 2.4.21。
-- 本地已验证 Node 25.7.0；其他 Node 版本尚未验证。
+- 本地验证环境为 Node 25.7.0、npm 11.10.1；其他 Node/npm 版本尚未验证。
 
 ## 入口
 
@@ -60,10 +60,16 @@ FinWork 可复用能力库，npm 包名为 `@lz19.02/finwork-kit`。一个仓库
 | pnpm dev:lib | 监听库 JS/CSS，供外部 link 联调 |
 | pnpm dev:types | 监听库声明，供外部 TypeScript 消费 |
 | pnpm typecheck | 检查库源码、文档案例和配置类型 |
+| pnpm test | Node 内置测试运行器，非 watch 模式；验证工程护栏正反例 |
+| pnpm check:boundaries | 检查库依赖、docs 隔离及 core 的传递依赖与无 DOM 类型环境 |
 | pnpm verify:exports | 构建后检查入口、声明、core 隔离、CSS 和 UI 静态渲染 |
+| pnpm verify:consumer | 构建后离线打包，在临时消费者验证 tarball 与目录 symlink 的公开类型、SSR、CSS 和 Vite 构建 |
+| pnpm check | 依次运行类型、边界、测试、库构建、exports 与消费者检查；不构建文档站、不发布 |
 | pnpm pack:check | 构建并预检 npm 包文件列表，不发布 |
 
 文档站开发和生产构建使用源码 alias，外部项目消费使用 dist。文档与使用案例统一放在 docs/，站点依赖只用于开发，不进入 npm 包。不要将站点样式当作库样式。文档站构建不作为 npm 包可消费的验证，包入口和外部消费者需单独检查。
+
+日常提交前运行 `pnpm check`；修改文档或站点配置时另外运行 `pnpm docs:build`。单独运行 `verify:exports` 或 `verify:consumer` 前先执行 `pnpm build:lib`，避免检查旧产物。首次开发仍须安装锁定依赖；消费检查本身不访问 registry，复用本仓库已安装的 React 与类型，并在 finally 中清理临时目录，不修改全局链接或业务项目。
 
 使用案例当前只保留占位；待 Kit 能力开发完成、FinPlus 接入迁移测试通过后，以 FinPlus 实际接入代码补充，不维护独立 Demo 工程。
 
@@ -79,6 +85,9 @@ React/react-dom 是外部 peer，但 symlink 可能让开发依赖产生重复 R
 
 link 与 tarball 消费是不同验收项；当前两种方式均已通过独立 npm 消费者的导入、类型检查、UI 静态渲染和 Vite 构建。本阶段不执行 npm publish。
 
+`pnpm verify:consumer` 将 tarball 消费和等效的包目录 symlink 消费固化为自动检查；它不执行全局 `npm link`，也不代替 pnpm 消费方 link/unlink 的专项验证。纯 core 检查先在没有 React/react-dom 的消费者中运行；UI 使用 React 18、TypeScript Bundler 解析和 Vite。UI 的 NodeNext 类型解析、CJS、其他 React 版本及构建器不在当前支持矩阵内。
+
 ## 实施与协作
 
 - AGENTS.md：仓库约束及后续自动化协作规则。
+- [开发与验证说明](docs/guide/development.md)：源码护栏、测试分层、消费验证范围和业务迁移准入。

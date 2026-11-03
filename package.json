@@ -31,7 +31,11 @@
     "docs:build": "dumi build",
     "docs:preview": "vite preview --outDir site-dist --port 4174",
     "typecheck": "tsc --noEmit",
+    "test": "node --test tests/*.test.mjs",
+    "check:boundaries": "node scripts/check-boundaries.mjs",
+    "check": "pnpm typecheck && pnpm check:boundaries && pnpm test && pnpm build:lib && pnpm verify:exports && pnpm verify:consumer",
     "verify:exports": "node scripts/verify-exports.mjs",
+    "verify:consumer": "node scripts/verify-consumer.mjs",
     "pack:check": "npm pack --dry-run",
     "prepack": "pnpm build:lib"
   },
