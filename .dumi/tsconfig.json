@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "dumi": ["./tmp/dumi/exports.ts", "./tmp-production/dumi/exports.ts"]
+    }
+  },
+  "include": [
+    "theme/**/*"
+  ],
+  "exclude": ["tmp", "tmp-production", "tmp-test"]
+}

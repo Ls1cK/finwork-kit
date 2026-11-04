@@ -1,11 +1,13 @@
 # FinWork Kit
 
-FinWork 可复用能力库，npm 包名为 `@lz19.02/finwork-kit`。一个仓库维护两个交付物：
+FinWork 是面向金融与办公场景的专业级任务执行智能体产品。FinWork Kit 是支撑其体验复用的组件与工具库，npm 包名为 `@lz19.02/finwork-kit`。一个仓库维护两个交付物：
 
 - npm 库：提供 UI 组件、处理 FinWork Agent 历史数据的 core-detail 与流式数据的 core-sse，以业务子入口扩展。
 - dumi 文档站：维护组件与 core 工具函数的介绍、API 和使用案例。
 
-当前已提供项目骨架、源码依赖护栏及可重复的包消费检查，尚未实现真实 SSE、历史解析或聊天 UI。文档与使用案例先保留占位，后续以经过迁移测试的 FinPlus 实际接入代码补充。
+当前已提供项目骨架、源码依赖护栏及可重复的包消费检查，尚未实现真实 SSE、历史解析或聊天 UI。文档站面向库的使用者，提供介绍及快速开始、组件与 SDK、协议接入的占位入口；安装、示例与 API 将随可用版本补充。
+
+文档阅读入口：[介绍](docs/guide/introduction.md) · [快速开始](docs/guide/getting-started.md) · [组件与 SDK](docs/reference/overview.md) · [协议接入](docs/protocol/integration.md)。
 
 ## 代码与构建边界
 
@@ -19,7 +21,8 @@ FinWork 可复用能力库，npm 包名为 `@lz19.02/finwork-kit`。一个仓库
 - pnpm 8.12.1；依赖版本固定在 package.json 和 pnpm-lock.yaml。
 - 库构建：Vite 6.4.3 + React 18.3.1 + TypeScript 5.9.3。
 - 文档站：dumi 2.4.21。
-- 本地验证环境为 Node 25.7.0、npm 11.10.1；其他 Node/npm 版本尚未验证。
+- 项目通过 `.nvmrc` 选择 Node 22.9.0，用于文档开发与构建。已有库检查还曾在 Node 25.7.0、npm 11.10.1 下验证。
+- Node 25.7.0 下文档构建会遇到 dumi/Umi 间接依赖的 `http_parser` 加载错误；文档开发与构建请使用已验证的 Node 22 环境。以上为验证记录，不代表最低版本要求。
 
 ## 入口
 
@@ -51,6 +54,15 @@ FinWork 可复用能力库，npm 包名为 `@lz19.02/finwork-kit`。一个仓库
 - 此阶段不提供自动发布、版本变更或内网 registry 配置；后续根据实际流水线适配。
 
 ## 本地开发与验证命令
+
+在项目根目录先切换 Node，再启动文档站：
+
+```bash
+nvm use
+pnpm dev
+```
+
+如果尚未安装 `.nvmrc` 指定的版本，先执行 `nvm install`。`.nvmrc` 不会自动切换当前终端；直接在 Node 25 下运行 `pnpm dev` 仍会遇到上述依赖兼容问题。
 
 | 命令 | 用途 |
 | --- | --- |
@@ -90,4 +102,4 @@ link 与 tarball 消费是不同验收项；当前两种方式均已通过独立
 ## 实施与协作
 
 - AGENTS.md：仓库约束及后续自动化协作规则。
-- [开发与验证说明](docs/guide/development.md)：源码护栏、测试分层、消费验证范围和业务迁移准入。
+- [开发与验证说明](MAINTAINING.md)：仓库维护资料，不进入面向使用者的文档站。

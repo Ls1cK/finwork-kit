@@ -1,0 +1,390 @@
+:root {
+  --fw-ink: #20242c;
+  --fw-muted: #596270;
+  --fw-line: #e2e5e9;
+  --fw-surface: #fff;
+  --fw-accent: #c8152d;
+  --fw-accent-hover: #ad1025;
+  --fw-on-accent: #fff;
+}
+
+html[data-prefers-color='dark'] {
+  --fw-ink: #edf0f4;
+  --fw-muted: #b1b8c3;
+  --fw-line: #343941;
+  --fw-surface: #1a1d23;
+  --fw-accent: #f18b96;
+  --fw-accent-hover: #f5a4ad;
+  --fw-on-accent: #20242c;
+}
+
+.dumi-default-doc-layout {
+  font-family: 'Avenir Next', 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+
+  .dumi-default-header-content {
+    max-width: 1200px;
+    padding-inline: 32px;
+  }
+
+  .dumi-default-header-left {
+    width: 224px;
+    flex-shrink: 0;
+  }
+
+  .finwork-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--fw-ink);
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+
+    > img {
+      width: 40px;
+      height: 40px;
+      object-fit: contain;
+    }
+
+    .finwork-brand-work {
+      color: #c8152d;
+    }
+  }
+
+  .dumi-default-hero {
+    position: relative;
+    box-sizing: border-box;
+    height: auto;
+    min-height: 440px;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 76px 32px 64px;
+    text-align: left;
+
+    &::before {
+      content: 'FINWORK KIT / DOCUMENTATION';
+      position: static;
+      display: block;
+      margin-bottom: 24px;
+      color: var(--fw-muted);
+      font: 12px/1.5 'SFMono-Regular', Consolas, monospace;
+      letter-spacing: 0.12em;
+      background: none;
+      opacity: 1;
+    }
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 82px;
+      right: 60px;
+      width: 240px;
+      height: 240px;
+      background: url('../assets/brand/finwork-icon.png') center / contain no-repeat;
+      pointer-events: none;
+    }
+
+    &-title {
+      margin: 0;
+      font-family: inherit;
+      font-size: clamp(48px, 5vw, 68px);
+      font-weight: 700;
+      letter-spacing: -0.05em;
+      line-height: 1.12;
+
+      [data-prefers-color='dark'] & {
+        opacity: 1;
+      }
+
+      > span {
+        color: var(--fw-ink);
+        background: none;
+        text-shadow: none;
+      }
+    }
+
+    > p {
+      max-width: 600px;
+      margin: 22px 300px 0 0;
+      color: var(--fw-muted);
+      font-size: 20px;
+      line-height: 1.8;
+
+      [data-prefers-color='dark'] & {
+        color: var(--fw-muted);
+      }
+    }
+
+    &-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 30px;
+
+      > a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+        min-width: 132px;
+        height: 46px;
+        padding: 0 22px;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        font-size: 15px;
+        font-weight: 500;
+        line-height: 1.5;
+        text-align: center;
+        text-decoration: none;
+        white-space: nowrap;
+        transition: background-color 160ms, border-color 160ms, color 160ms;
+
+        &:first-child {
+          color: var(--fw-on-accent);
+          background: var(--fw-accent);
+          border-color: var(--fw-accent);
+
+          &:hover {
+            background: var(--fw-accent-hover);
+            border-color: var(--fw-accent-hover);
+          }
+        }
+
+        &:not(:first-child) {
+          margin-inline-start: 0;
+          color: var(--fw-ink);
+          background: var(--fw-surface);
+          border-color: var(--fw-line);
+
+          &:hover {
+            color: var(--fw-accent);
+            border-color: var(--fw-accent);
+          }
+        }
+
+        &:hover {
+          opacity: 1;
+        }
+      }
+    }
+  }
+
+  .dumi-default-features {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 48px;
+    box-sizing: border-box;
+    max-width: 1200px;
+    margin: 0 auto 56px;
+    padding: 32px;
+    border-block: 1px solid var(--fw-line);
+
+    &[data-cols='3'] > .dumi-default-features-item {
+      float: none;
+      width: auto;
+      margin: 0;
+
+      &:not(:nth-child(3n)) {
+        margin-inline-end: 0;
+      }
+    }
+
+    &-item > h3 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+
+      > a {
+        color: var(--fw-ink);
+
+        [data-prefers-color='dark'] & {
+          color: var(--fw-ink);
+        }
+      }
+    }
+
+    &-item > p {
+      margin: 12px 0 0;
+      color: var(--fw-muted);
+      font-size: 14px;
+      line-height: 1.9;
+    }
+  }
+
+  .dumi-default-content[data-no-sidebar] {
+    max-width: 1136px;
+    margin: 0 auto;
+  }
+}
+
+.markdown .finwork-start {
+  > h2 {
+    margin: 0 0 12px;
+    font-size: 26px;
+    line-height: 1.4;
+    border: 0;
+  }
+
+  > p {
+    max-width: 800px;
+    margin: 0 0 28px;
+    color: var(--fw-muted);
+    font-size: 15px;
+    line-height: 1.9;
+  }
+}
+
+.finwork-doc-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+
+  > a {
+    position: relative;
+    display: block;
+    min-width: 0;
+    padding: 22px 52px 22px 24px;
+    border: 1px solid var(--fw-line);
+    border-radius: 8px;
+    background: var(--fw-surface);
+    text-decoration: none;
+    transition: border-color 160ms;
+
+    &::after {
+      content: '→';
+      position: absolute;
+      right: 24px;
+      top: 22px;
+      color: var(--fw-muted);
+      font-size: 18px;
+    }
+
+    &:hover {
+      border-color: var(--fw-accent);
+      text-decoration: none;
+    }
+
+    > strong {
+      color: var(--fw-ink);
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    > span {
+      display: block;
+      margin-top: 8px;
+      color: var(--fw-muted);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+  }
+}
+
+.finwork-release-note {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 24px 0 48px;
+  color: var(--fw-muted);
+  font-size: 13px;
+  line-height: 1.8;
+
+  > strong {
+    flex-shrink: 0;
+    color: var(--fw-ink);
+    font-weight: 500;
+  }
+}
+
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--fw-accent);
+  outline-offset: 4px;
+}
+
+@media (max-width: 1024px) {
+  .dumi-default-doc-layout .dumi-default-hero {
+    &::after {
+      right: 32px;
+      width: 190px;
+      height: 190px;
+    }
+
+    > p {
+      margin-right: 220px;
+      font-size: 18px;
+    }
+  }
+
+  .dumi-default-doc-layout .dumi-default-features {
+    gap: 28px;
+  }
+}
+
+@media (max-width: 767px) {
+  .dumi-default-doc-layout {
+    .dumi-default-header-content {
+      padding-inline: 20px;
+    }
+
+    .dumi-default-hero {
+      min-height: 0;
+      padding: 48px 24px 40px;
+
+      &::before {
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        margin-bottom: 20px;
+      }
+
+      &::after {
+        display: none;
+      }
+
+      > p {
+        margin: 20px 0 0;
+        font-size: 18px;
+      }
+
+      &-actions > a {
+        min-width: 128px;
+      }
+    }
+
+    .dumi-default-features {
+      grid-template-columns: 1fr;
+      margin-bottom: 36px;
+      padding: 28px 24px;
+      gap: 28px;
+    }
+  }
+
+  .finwork-doc-links {
+    grid-template-columns: 1fr;
+    gap: 12px;
+
+    > a {
+      padding: 20px 48px 20px 20px;
+    }
+  }
+
+  .finwork-release-note {
+    display: block;
+
+    > strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dumi-default-doc-layout .dumi-default-hero-actions > a,
+  .dumi-default-doc-layout .finwork-doc-links > a {
+    transition: none;
+  }
+}

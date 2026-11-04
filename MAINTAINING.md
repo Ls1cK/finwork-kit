@@ -1,7 +1,3 @@
----
-title: 开发与验证
----
-
 # 开发与验证
 
 当前交付是工程骨架与检查工具。`testCoreSse`、`testCoreDetail`、`ChatExample` 是占位能力，不代表真实聊天 SDK 已可使用。FinWork Chat 仍在迭代，本阶段不迁移业务实现。
@@ -63,7 +59,9 @@ pnpm docs:build
 | 公开类型约束 | 正常调用通过，错误 core 返回赋值/错误 title 使用 `@ts-expect-error` 确认拒绝 |
 | 包内容隔离 | 真实 tarball 白名单，排除测试、脚本、文档站和缓存 |
 
-Node 25.7.0、pnpm 8.12.1、npm 11.10.1 是当前本地验证环境。未覆盖其他 Node/React/构建器、UI NodeNext 类型解析、CJS、pnpm 消费方 link/unlink、浏览器交互及内网 registry/发布流水线。离线消费检查依赖仓库已经安装好锁定的开发依赖，不验证从空缓存经 registry 安装依赖的过程。
+已有库检查的本地验证环境为 Node 25.7.0、pnpm 8.12.1、npm 11.10.1。文档站构建另在 Node 22.9.0 下通过；Node 25.7.0 下，dumi/Umi 的间接依赖会报 `No such module: http_parser`，需切换到已验证的 Node 22 环境再构建文档。这里记录的是验证环境，不推断最低 Node 版本。
+
+未覆盖其他 Node/React/构建器、UI NodeNext 类型解析、CJS、pnpm 消费方 link/unlink、浏览器交互及内网 registry/发布流水线。离线消费检查依赖仓库已经安装好锁定的开发依赖，不验证从空缓存经 registry 安装依赖的过程。
 
 ## 后续业务迁移准入
 
