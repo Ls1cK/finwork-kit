@@ -4,18 +4,20 @@
   --fw-line: #e2e5e9;
   --fw-surface: #fff;
   --fw-accent: #c8152d;
-  --fw-accent-hover: #ad1025;
+  --fw-action-bg: #c8152d;
+  --fw-action-hover: #ad1025;
   --fw-on-accent: #fff;
 }
 
 html[data-prefers-color='dark'] {
   --fw-ink: #edf0f4;
-  --fw-muted: #b1b8c3;
-  --fw-line: #343941;
-  --fw-surface: #1a1d23;
-  --fw-accent: #f18b96;
-  --fw-accent-hover: #f5a4ad;
-  --fw-on-accent: #20242c;
+  --fw-muted: #b6bdc9;
+  --fw-line: #343b47;
+  --fw-surface: #191c23;
+  --fw-accent: #ff9aa9;
+  --fw-action-bg: #c8152d;
+  --fw-action-hover: #df1b36;
+  --fw-on-accent: #fff;
 }
 
 .dumi-default-doc-layout {
@@ -145,12 +147,23 @@ html[data-prefers-color='dark'] {
 
         &:first-child {
           color: var(--fw-on-accent);
-          background: var(--fw-accent);
-          border-color: var(--fw-accent);
+          background: var(--fw-action-bg);
+          border-color: var(--fw-action-bg);
+
+          [data-prefers-color='dark'] & {
+            color: var(--fw-on-accent);
+            background: var(--fw-action-bg);
+            border-color: var(--fw-action-bg);
+          }
 
           &:hover {
-            background: var(--fw-accent-hover);
-            border-color: var(--fw-accent-hover);
+            background: var(--fw-action-hover);
+            border-color: var(--fw-action-hover);
+
+            [data-prefers-color='dark'] & {
+              background: var(--fw-action-hover);
+              border-color: var(--fw-action-hover);
+            }
           }
         }
 
@@ -160,9 +173,20 @@ html[data-prefers-color='dark'] {
           background: var(--fw-surface);
           border-color: var(--fw-line);
 
+          [data-prefers-color='dark'] & {
+            color: var(--fw-ink);
+            background: var(--fw-surface);
+            border-color: var(--fw-line);
+          }
+
           &:hover {
             color: var(--fw-accent);
             border-color: var(--fw-accent);
+
+            [data-prefers-color='dark'] & {
+              color: var(--fw-accent);
+              border-color: var(--fw-accent);
+            }
           }
         }
 

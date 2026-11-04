@@ -8,7 +8,16 @@ const logo = `data:image/png;base64,${readFileSync(resolve('docs/assets/brand/fi
 export default defineConfig({
   title: 'FinWork Kit · 组件与 SDK',
   favicons: [logo],
-  theme: { '@c-primary': '#c8152d', '@c-primary-dark': '#f18b96' },
+  theme: {
+    '@c-primary': '#c8152d',
+    '@c-primary-dark': '#ff9aa9',
+    '@c-site-bg-dark': '#111318',
+    '@c-text-dark': '#edf0f4',
+    '@c-text-secondary-dark': '#b6bdc9',
+    '@c-text-note-dark': '#8c97a7',
+    '@c-border-dark': '#343b47',
+    '@c-border-less-dark': '#343b47',
+  },
   themeConfig: {
     name: 'FinWork Kit',
     logo,
@@ -36,6 +45,6 @@ export default defineConfig({
   resolve: { docDirs: ['docs'], atomDirs: [] },
   autoAlias: false,
   alias: sourceAliases,
-  outputPath: 'site-dist',
+  outputPath: 'site-dist/uat/oa',
   mfsu: false,
 });
