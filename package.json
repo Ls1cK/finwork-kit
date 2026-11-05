@@ -1,11 +1,28 @@
 {
   "name": "@lz19.02/finwork-kit",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Reusable FinWork capabilities",
   "type": "module",
   "packageManager": "pnpm@8.12.1",
-  "files": ["dist"],
-  "sideEffects": ["**/*.css"],
+  "files": [
+    "dist"
+  ],
+  "typesVersions": {
+    "*": {
+      "chat/ui": [
+        "dist/types/chat/ui/index.d.ts"
+      ],
+      "chat/core-sse": [
+        "dist/types/chat/core-sse/index.d.ts"
+      ],
+      "chat/core-detail": [
+        "dist/types/chat/core-detail/index.d.ts"
+      ]
+    }
+  },
+  "sideEffects": [
+    "**/*.css"
+  ],
   "exports": {
     "./chat/core-sse": {
       "types": "./dist/types/chat/core-sse/index.d.ts",
@@ -39,13 +56,18 @@
     "pack:check": "npm pack --dry-run",
     "prepack": "pnpm build:lib"
   },
+  "dependencies": {
+    "@ant-design/icons": "4.8.3",
+    "ahooks": "3.9.7",
+    "antd": "4.24.8",
+    "highlight.js": "11.11.1",
+    "highlightjs-vue": "1.0.0",
+    "markdown-to-jsx": "8.0.0",
+    "yaml": "2.9.0"
+  },
   "peerDependencies": {
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
-  },
-  "peerDependenciesMeta": {
-    "react": { "optional": true },
-    "react-dom": { "optional": true }
   },
   "pnpm": {
     "overrides": {
@@ -55,10 +77,13 @@
     }
   },
   "devDependencies": {
+    "@dicebear/core": "9.2.3",
+    "@dicebear/lorelei": "9.2.3",
     "@types/node": "22.12.0",
     "@types/react": "18.3.31",
     "@types/react-dom": "18.3.7",
     "dumi": "2.4.21",
+    "happy-dom": "20.3.7",
     "less": "4.6.7",
     "react": "18.3.1",
     "react-dom": "18.3.1",

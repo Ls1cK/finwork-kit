@@ -22,6 +22,8 @@ export function checkBoundaries(root) {
   const allowedPackages = new Set([
     ...Object.keys(manifest.dependencies ?? {}),
     ...Object.keys(manifest.peerDependencies ?? {}),
+    // Avatar generators are bundled into UI, with no runtime package dependency.
+    ...['@dicebear/core', '@dicebear/lorelei'].filter((name) => manifest.devDependencies?.[name]),
   ]);
   const coreProgram = ts.createProgram({
     // shortcut: register new pure entries here when extending beyond the current chat exports.
@@ -53,6 +55,18 @@ export function checkBoundaries(root) {
     const text = readFileSync(file, 'utf8');
     const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
     const visit = (node) => {
+      if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier) &&
+        node.moduleSpecifier.text === 'react' && node.importClause?.namedBindings &&
+        ts.isNamedImports(node.importClause.namedBindings)) {
+        for (const binding of node.importClause.namedBindings.elements) {
+          if (['useContext', 'createContext'].includes((binding.propertyName ?? binding.name).text)) {
+            errors.push(name + ': UI dependencies must be injected through props, not React context');
+          }
+        }
+      }
+      if (ts.isPropertyAccessExpression(node) && ['useContext', 'createContext'].includes(node.name.text)) {
+        errors.push(name + ': UI dependencies must be injected through props, not React context');
+      }
       if (ts.isCallExpression(node) &&
         (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
           (ts.isIdentifier(node.expression) && node.expression.text === 'require')) &&

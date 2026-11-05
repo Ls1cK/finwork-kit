@@ -18,11 +18,22 @@ for (const [name, target] of Object.entries(manifest.exports)) {
 
 const { testCoreSse } = await import('@lz19.02/finwork-kit/chat/core-sse');
 const { testCoreDetail } = await import('@lz19.02/finwork-kit/chat/core-detail');
-const { ChatExample } = await import('@lz19.02/finwork-kit/chat/ui');
+const ui = await import('@lz19.02/finwork-kit/chat/ui');
+for (const name of [
+  'MessageItem', 'UserMessage', 'AiMessage', 'SystemMessage', 'MessageContentList',
+  'MessageContentItem', 'MessageCollapse', 'ThinkContent', 'AssistantContent',
+  'ToolCallMsg', 'ToolCallResponse', 'ContextCompressContent', 'AskUserQuestionContent',
+  'TaskCompletedSplit', 'MultiSubAgentCard', 'SubAgentListItem', 'MessageActions',
+  'SuggestedQuestions', 'ChatCompletedResult', 'MessageFileCard', 'MessageFileList',
+  'SkillOutputCard', 'OutputFilesCollapse',
+  'MarkdownViewer', 'StreamingMarkdownRenderer', 'StreamingTextRenderer', 'MarkdownCodeBlock',
+  'CodeViewer', 'ReferenceAnchor',
+]) assert.ok(ui[name], 'Missing UI export: ' + name);
 assert.equal(testCoreSse(), 'core-sse:ok');
 assert.equal(testCoreDetail(), 'core-detail:ok');
-assert.match(renderToStaticMarkup(createElement(ChatExample, { title: 'Consumer UI' })), /Consumer UI/);
-assert.ok(readFileSync(join(root, 'dist/chat-ui.css'), 'utf8').length > 0);
+for (const name of ['ChatExample', 'FeedbackForm', 'FeedbackModal']) assert.equal(ui[name], undefined);
+assert.match(renderToStaticMarkup(createElement(ui.AiMessage, { title: 'Consumer UI' })), /Consumer UI/);
+assert.match(readFileSync(join(root, 'dist/chat-ui.css'), 'utf8'), /\.ant-btn/);
 
 const isolated = mkdtempSync(join(tmpdir(), 'finwork-kit-core-'));
 try {

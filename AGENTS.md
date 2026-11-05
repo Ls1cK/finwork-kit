@@ -5,7 +5,7 @@
 - FinWork Kit is one npm package named @lz19.02/finwork-kit. It is not a workspace or monorepo.
 - This repository maintains two deliverables: the npm library (UI, Agent detail and SSE tools) and its dumi documentation site.
 - First-stage public entries are chat/core-sse, chat/core-detail, chat/ui and chat/style.css.
-- Current functions and UI are scaffolding examples, not production SSE/detail/chat implementations.
+- Core SSE/detail functions remain scaffolding examples. Chat UI provides props-driven message primitives extracted from FinPlus, with business integration owned by the consumer.
 - Future capabilities belong under their own domain namespace; do not aggregate UI into pure core entries.
 
 ## Source boundaries
@@ -13,7 +13,7 @@
 - Library code belongs in src/. Core must not import React, DOM, CSS, application stores or docs code.
 - UI consumes explicit props and callbacks. Do not add FinPlus services, routes, storage, analytics SDKs or business state.
 - Documentation, usage examples and site assets belong in docs/. Do not create a separate demo app.
-- Usage examples remain placeholders until Kit development and FinPlus migration tests are complete; then use the actual FinPlus integration as the example.
+- UI examples follow the verified FinPlus adapter patterns and use public library imports. Core SSE/detail examples remain placeholders until those implementations are available.
 - Keep library and documentation build configuration and output separate.
 - Documentation and AGENTS.md are versioned source. Generated site files, caches and credentials are not.
 
@@ -24,7 +24,7 @@
 - Do not overwrite unrelated user changes or copy credentials/internal publishing configuration into this repository.
 - Keep dependency versions pinned and commit pnpm-lock.yaml. Use pnpm 8.12.1.
 - UI styles use CSS Modules + Less. Consumers should receive compiled CSS, not require a Less or source-alias setup.
-- React/react-dom and their subpaths stay external. Maintain optional peer declarations and test linked consumers.
+- React/react-dom and their subpaths stay external and share the host runtime through peer declarations. UI implementation dependencies belong in dependencies. Test linked consumers.
 - Build/package changes must preserve actual exports, declaration paths, styles and file whitelist.
 
 ## Build and delivery contracts

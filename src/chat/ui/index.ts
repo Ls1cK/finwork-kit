@@ -1,2 +1,3 @@
-export { ChatExample } from './ChatExample';
-export type { ChatExampleProps } from './ChatExample';
+import './style.less';
+export * from './message';
+export * from './markdown';

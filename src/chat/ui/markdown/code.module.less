@@ -1,0 +1,81 @@
+@import './tokens.less';
+
+.codeWrapper,
+.container {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  color: @text-light;
+  font-size: 13px;
+  line-height: 20.8px;
+  background: @bg-code-dark;
+  position: relative;
+}
+
+.copyBtn {
+  z-index: 2;
+  color: @text-tertiary;
+  font-size: 16px;
+  position: absolute;
+  right: @spacing-lg;
+  top: @spacing-lg;
+  &:hover,
+  &:active {
+    color: @text-light;
+  }
+}
+
+.codeBlock {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+  margin: 0;
+  height: 100%;
+  padding: @spacing-lg;
+  overflow-x: auto;
+  white-space: pre;
+  word-wrap: normal;
+  tab-size: 4;
+  word-break: break-all;
+
+  // 问题出在 .codeBlock 这个 <pre> 标签上。
+  // 默认情况下，块级元素（display: block，<pre> 的默认行为）的宽度是父元素（.codeWrapper）宽度的 100%。
+
+  // 因为你设置了 white-space: pre，超长的代码文本溢出（spill out）了 .codeBlock 的边界。
+  // 你设置的 padding-right: @spacing-lg 实际上是被渲染在了屏幕初始可视区域的 100% 宽度处。当文本继续向右溢出时，它是“冲破”了这个 padding 的。所以当你滚动到最右侧时，你看到的是溢出容器的纯文本，自然就没有 right padding 了。
+
+  // 解决方案
+  // 要解决这个问题，你需要让 .codeBlock 的宽度被内部最长的内容撑开，而不是固定为父元素的 100%。
+  width: fit-content;
+  min-width: 100%;
+
+  :global(span) {
+    display: inline-block;
+    vertical-align: top;
+  }
+}
+
+.code {
+  display: block;
+}
+
+.line {
+  display: flex;
+  align-items: stretch;
+  min-height: 20.8px; // 1.6 * 13px，换行时自动撑高
+}
+
+.lineNumber {
+  width: 48px;
+  min-width: 48px;
+  padding-right: 16px;
+  text-align: center;
+  color: @text-secondary;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.lineContent {
+  line-height: 20.8px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}

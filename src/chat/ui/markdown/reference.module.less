@@ -1,0 +1,183 @@
+.anchor {
+  border: 0;
+  display: inline-block;
+  padding: 0 5px 1px;
+  margin: 0 2px;
+  font-size: 12px;
+  line-height: 17px;
+  color: #a30030;
+  background: rgba(163, 0, 48, 0.08);
+  border-radius: 4px;
+  cursor: pointer;
+  vertical-align: text-bottom;
+  user-select: none;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  box-shadow: 0 0 0 rgba(163, 0, 48, 0);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.anchor:hover,
+.anchor:focus-visible {
+  background: rgba(163, 0, 48, 0.16);
+  color: #7e0025;
+  text-decoration: underline;
+  text-decoration-color: rgba(163, 0, 48, 0.35);
+  text-underline-offset: 3px;
+  box-shadow: 0 2px 6px rgba(163, 0, 48, 0.22);
+  transform: translateY(-1px);
+}
+
+.anchor:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(163, 0, 48, 0.25);
+}
+
+.anchor:focus-visible {
+  outline: 2px solid rgba(163, 0, 48, 0.4);
+  outline-offset: 1px;
+}
+
+.popover :global(.ant-popover-inner) {
+  border-radius: 10px;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.14);
+}
+
+.card {
+  width: 340px;
+  display: flex;
+  flex-direction: column;
+  max-height: 380px;
+}
+
+.cardHeader {
+  padding: 10px 12px;
+  background: linear-gradient(135deg, rgba(163, 0, 48, 0.06), rgba(163, 0, 48, 0.02));
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  flex-shrink: 0;
+}
+
+.headerTitleArea {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mainTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.88);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.navButton {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.navButton:hover {
+  color: #a30030 !important;
+  background: rgba(163, 0, 48, 0.08);
+}
+
+.navIndex {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+  min-width: 32px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.cardBody {
+  padding: 10px 12px;
+  overflow-y: auto;
+  flex-shrink: 1;
+  min-height: 0;
+  /* 窄滚动条，弱化突兀感 */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(163, 0, 48, 0.18) transparent;
+  scrollbar-gutter: stable;
+}
+
+.cardBody::-webkit-scrollbar {
+  width: 4px;
+}
+
+.cardBody::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cardBody::-webkit-scrollbar-thumb {
+  background: rgba(163, 0, 48, 0.18);
+  border-radius: 2px;
+}
+
+.cardBody::-webkit-scrollbar-thumb:hover {
+  background: rgba(163, 0, 48, 0.32);
+}
+
+.subTitle {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.88);
+  line-height: 1.5;
+  margin-bottom: 6px;
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+  margin-bottom: 8px;
+}
+
+.metaTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.04);
+  color: rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.body {
+  font-size: 12px;
+  line-height: 1.7;
+  color: rgba(0, 0, 0, 0.66);
+  word-break: break-word;
+}
+
+.footer {
+  padding: 8px 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  text-align: right;
+  background: rgba(0, 0, 0, 0.02);
+  flex-shrink: 0;
+}

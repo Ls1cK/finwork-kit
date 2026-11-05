@@ -1,6 +1,6 @@
 # 开发与验证
 
-当前交付是工程骨架与检查工具。`testCoreSse`、`testCoreDetail`、`ChatExample` 是占位能力，不代表真实聊天 SDK 已可使用。FinWork Chat 仍在迭代，本阶段不迁移业务实现。
+当前交付包含工程护栏和从 FinPlus 抽离的消息、Markdown、流式展示及代码高亮组件。UI 使用显式 props、回调和渲染插槽，FinPlus 的 store、服务、业务反馈弹窗与路由由消费方适配。MessageItem 已加入配置控制的双路接入，浏览器视觉验证待执行。`testCoreSse`、`testCoreDetail` 仍是占位能力。
 
 ## 目录与依赖边界
 
@@ -34,7 +34,7 @@ pnpm docs:build
 
 ## 测试如何扩展
 
-- 当前 `pnpm test` 使用 Node 内置测试运行器执行 `tests/*.test.mjs`，已覆盖工程护栏的合法依赖和越界反例；不为占位函数重复建立业务测试。
+- `pnpm test` 使用 Node 内置测试运行器执行 `tests/*.test.mjs`，覆盖工程边界、消息渲染与扩展、过程拆分、受控折叠及回调。交互测试通过 happy-dom 在进程内运行。
 - 新增纯函数时，在 tests 中补输入、输出、异常和边界断言，脱离 FinPlus 的服务、store 和页面类型；业务逻辑的单元测试应直接验证行为，不能只断言构建成功。
 - 新增解析器时，覆盖字段缺失、字段名不匹配、空值、无效输入和合法结构变体。
 - 新增 UI 行为时再选择所需的组件/DOM 测试工具；当前 SSR 只检查静态 props 渲染，不覆盖点击、焦点、输入法、滚动或可访问性交互。
@@ -45,12 +45,12 @@ pnpm docs:build
 `pnpm build:lib` 后运行 `pnpm verify:consumer`。脚本执行以下步骤：
 
 1. 在临时目录生成真实 npm tarball，检查只包含 dist、package.json 及 README/许可等允许元信息；跳过重复 prepack。
-2. 用 npm 离线安装该 tarball，不执行生命周期脚本；先断言消费者没有 React/react-dom，再检查纯 core 的 Node 导入和 NodeNext 声明。
-3. 将本仓库已安装的 React 18 和类型链接给临时消费者，检查公开 UI 声明、错误 props 的类型反例、SSR、显式 CSS 导入和 Vite 构建。UI 类型使用与 Vite 对应的 Bundler 解析。
-4. 将 tarball 安装结果替换为 kit 目录 symlink，再检查 core、UI 声明、SSR、CSS 和 Vite 构建；Vite 通过 dedupe 统一 React 解析。
+2. 临时消费者声明 React 18 和类型，用 npm 安装该 tarball，不执行生命周期脚本；优先使用缓存，缺失时访问配置的 registry。断言 Kit 的普通依赖自动安装，检查纯 core 的 Node 导入和无 DOM 的 NodeNext 声明。
+3. 使用实际安装的依赖检查公开 UI 声明、错误 props 的类型反例、SSR、单一 Kit CSS 导入和 Vite 构建。UI 类型使用与 Vite 对应的 Bundler 解析。
+4. 将 tarball 安装结果替换为 kit 目录 symlink，并将临时消费者的 React 运行时与类型链接到同一本地版本，再检查 core、UI 声明、SSR、CSS 和 Vite 构建；Vite 通过 dedupe 统一 React 解析。
 5. 无论成功或失败，清理本次临时目录，不触碰真实 FinPlus 的 node_modules 或全局 npm link。
 
-这里的临时消费者是工程测试夹具，不是长期维护的独立 Demo；文档使用案例继续占位，待真实接入完成后补充。
+临时消费者用于工程测试。文档中的消息组合与内容扩展示例基于已验证的 FinPlus 适配方式，通过公开包路径引用源码。
 
 | 已覆盖场景 | 当前验证方式 |
 | --- | --- |
@@ -67,4 +67,4 @@ pnpm docs:build
 
 下一步先选一个已经稳定的小能力，确认真实输入/输出、对象写入所有权、错误行为和脱敏夹具；核对最新 FinPlus 实现后再设计公共模型。SSE、历史解析和 UI 按各自行为拆任务，共享算法只抽一次。
 
-库内单测及包消费通过后，再规划 FinPlus 的 adapter、默认路径、会话重建、双路径回归和回滚。当前不提前增加全套消息类型、controller、Provider、迁移开关、埋点或主题系统；这些各自在实际需求明确时独立立项。
+MessageItem 的 Kit 适配、默认路径、双路开关和相关回归已完成。后续 SSE、历史解析等能力继续分别设计和验证，公共模型随实际需求演进。

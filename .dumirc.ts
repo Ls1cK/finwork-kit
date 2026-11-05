@@ -4,6 +4,7 @@ import { defineConfig } from 'dumi';
 import { sourceAliases } from './config/entries';
 
 const logo = `data:image/png;base64,${readFileSync(resolve('docs/assets/brand/finwork-icon.png')).toString('base64')}`;
+const { version } = JSON.parse(readFileSync(resolve('package.json'), 'utf8'));
 
 export default defineConfig({
   title: 'FinWork Kit · 组件与 SDK',
@@ -23,8 +24,8 @@ export default defineConfig({
     logo,
     nav: [
       { title: '指南', link: '/guide/introduction' },
-      { title: '组件与 SDK', link: '/reference/overview' },
-      { title: '协议接入', link: '/protocol/integration' },
+      { title: '组件', link: '/reference/overview' },
+      { title: 'SDK', link: '/sdk/overview' },
     ],
     sidebar: {
       '/guide': [
@@ -34,13 +35,19 @@ export default defineConfig({
         ] },
       ],
       '/reference': [{ title: '使用文档', children: [
-        { title: '组件与 SDK', link: '/reference/overview' },
+        { title: '组件总览', link: '/reference/overview' },
+        { title: '消息布局', link: '/reference/messages' },
+        { title: '消息内容', link: '/reference/content' },
+        { title: '子智能体', link: '/reference/subagents' },
+        { title: '文件展示', link: '/reference/files' },
+        { title: '消息操作', link: '/reference/actions' },
+        { title: 'Markdown 与引用', link: '/reference/markdown' },
       ] }],
-      '/protocol': [{ title: '协议接入', children: [
-        { title: '接入指引', link: '/protocol/integration' },
+      '/sdk': [{ title: 'SDK', children: [
+        { title: '概览', link: '/sdk/overview' },
       ] }],
     },
-    footer: 'FinWork Kit · 为专业任务执行构建一致体验',
+    footer: `FinWork Kit v${version} · 为专业任务执行构建一致体验`,
   },
   resolve: { docDirs: ['docs'], atomDirs: [] },
   autoAlias: false,

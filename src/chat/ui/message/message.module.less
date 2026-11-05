@@ -1,0 +1,194 @@
+@primary: #a30030;
+@text: #333;
+@secondary: #666;
+@tertiary: #999;
+@border: #e8e8e8;
+@light: #f6f6f6;
+@success: #6cbf3b;
+@warning: #e9ad2b;
+@error: #ff4d4f;
+@info: #1890ff;
+
+.messageItem {
+  width: 100%;
+  min-width: 0;
+  color: @text;
+}
+
+.userMessage {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  padding-left: 10%;
+  min-width: 0;
+}
+
+.userBubble {
+  position: relative;
+  max-width: 100%;
+  padding: 12px 16px;
+  border: 1px solid @border;
+  border-radius: 16px 0 16px 16px;
+  background: @light;
+  color: @text;
+  font-size: 15px;
+  line-height: 24px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.userBubbleExpandable { padding-bottom: 42px; }
+.userBubbleCollapsed { max-height: 320px; overflow: hidden; }
+.skillName:global(.ant-tag) { border: 0; border-radius: 6px; padding: 2px 4px; color: @secondary; background: @light; font-size: 13px; }
+.gradientMask { position: absolute; bottom: 0; left: 0; right: 0; height: 56px; background: linear-gradient(to bottom, transparent, rgba(246, 246, 246, 0.4) 20%, rgba(246, 246, 246, 0.75) 50%, rgba(246, 246, 246, 0.95)); pointer-events: none; border-radius: 0 0 0 16px; }
+
+.expandButton:global(.ant-btn) {
+  position: absolute;
+  bottom: 8px;
+  left: 16px;
+  z-index: 1;
+  font-size: 15px;
+  color: @secondary;
+  background: @light;
+}
+
+.metadata {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: @tertiary;
+  font-size: 12px;
+}
+
+.aiMessage { display: flex; flex-direction: column; gap: 16px; width: 100%; min-width: 0; }
+.aiHeader { display: flex; align-items: center; gap: 8px; color: @primary; font-size: 16px; font-weight: 500; }
+.aiContent { display: flex; flex-direction: column; min-width: 0; }
+.systemMessage { margin: 16px 0; text-align: center; font-size: 13px; font-style: italic; }
+.assistantContent { width: 100%; min-width: 0; overflow-wrap: anywhere; }
+.thinkContent { color: @secondary; overflow-wrap: anywhere; }
+.plainText { white-space: pre-wrap; }
+
+.collapse {
+  margin-bottom: 16px;
+}
+
+.thinkCollapse, .taskCompletedCollapse {
+  > :global(.ant-collapse) > :global(.ant-collapse-item) > :global(.ant-collapse-header) {
+    padding: 2px;
+    color: @secondary;
+  }
+
+  > :global(.ant-collapse) > :global(.ant-collapse-item) > :global(.ant-collapse-content) > :global(.ant-collapse-content-box) {
+    padding: 16px 0 0 2px;
+  }
+}
+.inlineArrow { font-size: 12px; margin-left: 4px; transition: transform 0.2s; }
+.taskCompletedCollapse > :global(.ant-collapse) > :global(.ant-collapse-item) > :global(.ant-collapse-header) { padding: 2px 2px 8px; border-bottom: 1px solid @border; font-size: 15px; }
+.taskCompletedCollapse > :global(.ant-collapse) > :global(.ant-collapse-item) > :global(.ant-collapse-content) > :global(.ant-collapse-content-box) { padding-left: 0; }
+.taskCompletedCollapse[data-expanded='true'] { margin-bottom: 0; }
+
+.toolCall { margin-bottom: 16px; min-width: 0; }
+.toolCallCard {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 12px 16px;
+  height: 32px;
+  box-sizing: border-box;
+  line-height: 32px;
+  background: #fff;
+  border: 1px solid @border;
+  border-radius: 16px;
+  color: @tertiary;
+  font-size: 12px;
+}
+
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.contextCompress:global(.ant-divider) { margin: 48px 0 64px; color: @tertiary; font-size: 15px; font-weight: 400; }
+.success { color: @success; }
+.failed, .error { color: @error; }
+.unfinished, .timeout, .uncompleted { color: @warning; }
+.compressing { color: @info; }
+.secondary { color: @tertiary; }
+.questionPreview { padding: 16px; margin-bottom: 16px; background: fade(@info, 10%); border-radius: 16px; }
+.questionOptions { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.questionAnswer { margin-top: 16px; :global(.ant-input[disabled]) { height: 50px; padding: 0 16px; border-radius: 16px; border-color: @border; background: @light; color: @text; font-size: 15px; cursor: default; } }
+.questionTitle { font-size: 15px; line-height: 22px; font-weight: 500; }
+.questionOptions > :global(.ant-radio-wrapper) { align-self: flex-start; min-height: 32px; padding: 4px 16px; border-radius: 16px; background: @light; color: @text; font-size: 15px; :global(.ant-radio-disabled + span) { color: @text; } :global(.ant-radio-disabled.ant-radio-checked .ant-radio-inner) { border-color: @info; background: #fff; &::after { background: @info; } } }
+.compressStatus { display: inline-flex; align-items: center; gap: 8px; line-height: 20px; font-size: 16px; > span:last-child { color: @tertiary; font-size: 15px; } }
+.subAgentList { display: flex; flex-direction: column; gap: 16px; }
+.subAgentCollapse > :global(.ant-collapse) { border-radius: 12px; }
+.subAgentCollapse > :global(.ant-collapse) > :global(.ant-collapse-item) { background: #fff; border-radius: 12px; }
+.clusterStatus { margin-right: 8px; color: @primary; }
+.subAgentCard { width: 100%; height: 108px; box-sizing: border-box; padding: 16px; border: 1px solid @border; border-radius: 16px; background: @light; &:hover { background: #f1f1f1; } }
+.subAgentTrigger { display: block; height: 100%; }
+
+.subAgent:global(.ant-btn) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  padding: 0 16px;
+  border-color: @border;
+  border-radius: 16px;
+  text-align: left;
+  white-space: normal;
+  color: @text;
+  background: #fff;
+  &:disabled { color: @text; background: #fff; border-color: @border; }
+}
+
+.subAgent > .avatar { font-size: 48px; display: inline-flex; flex-shrink: 0; }
+.subAgent > .subAgentInfo { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 4px; font-size: 13px; > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } }
+.subAgent > .agentStatus { display: inline-flex; flex-shrink: 0; align-items: center; gap: 8px; white-space: nowrap; font-size: 15px; color: @tertiary; :global(.ant-tag) { margin: 0; } }
+.promptPopover :global(.ant-popover-inner-content) { width: min(420px, 85vw); height: 300px; box-sizing: border-box; padding: 16px; overflow: auto; background: #fff; }
+.actions { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.activeAction:global(.ant-btn) { color: @primary; }
+.suggestions { margin: 16px 0; }
+.suggestionTitle { color: @secondary; font-size: 13px; font-weight: 600; }
+
+.suggestion:global(.ant-btn) {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  height: auto;
+  min-height: 40px;
+  margin-top: 8px;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 20px;
+  background: @light;
+  color: @text;
+  text-align: left;
+  white-space: normal;
+  font-size: 15px;
+  &:hover { background: #f1f1f1; color: @text; }
+
+  > span:nth-child(2) { flex: 1; overflow-wrap: anywhere; }
+}
+
+.completedResult { display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px; }
+.completedRow { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 14px; }
+.usage { display: flex; flex-wrap: wrap; gap: 16px; color: @tertiary; }
+.fileCard { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border: 1px solid @border; border-radius: 12px; background: #fff; min-width: 0; }
+.fileCard { transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s; &:hover { border-color: @primary; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); transform: translateY(-1px); } }
+.fileIcon { color: @primary; font-size: 24px; }
+.fileTitle { flex: 1; min-width: 0; overflow-wrap: anywhere; font-weight: 600; font-size: 14px; }
+.fileList { display: flex; gap: 12px; max-width: 100%; overflow-x: auto; padding: 2px; }
+.fileList > .fileCard { flex: 0 0 auto; max-width: 320px; }
+.outputFiles { display: flex; flex-direction: column; gap: 24px; margin-bottom: 24px; }
+.allOutputFiles { width: 100%; background: #f1f1f1; }
+.allOutputFiles:hover { border-color: #d8d8d8; }
+.skillDebugOutputCard { width: 100%; border-color: @warning; .fileIcon { color: @warning; font-size: 32px; } .fileTitle { font-size: 16px; } }
+.outputSkills { display: flex; flex-wrap: wrap; gap: 12px; }
+
+@media (max-width: 480px) {
+  .userMessage { padding-left: 0; }
+  .subAgentCard { padding: 8px; }
+  .subAgent:global(.ant-btn) { padding: 8px; }
+}

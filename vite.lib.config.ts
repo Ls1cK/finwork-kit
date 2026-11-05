@@ -14,6 +14,13 @@ export default defineConfig({
     },
     rollupOptions: {
       external: (id) =>
+        ['ahooks', 'highlight.js', 'highlightjs-vue', 'markdown-to-jsx', 'yaml'].some(
+          (name) => id === name || id.startsWith(name + '/'),
+        ) ||
+        id === 'antd' ||
+        id.startsWith('antd/') ||
+        id === '@ant-design/icons' ||
+        id.startsWith('@ant-design/icons/') ||
         id === 'react' ||
         id.startsWith('react/') ||
         id === 'react-dom' ||

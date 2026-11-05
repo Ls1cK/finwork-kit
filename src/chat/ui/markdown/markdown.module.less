@@ -1,0 +1,281 @@
+@import './tokens.less';
+
+.plainText { white-space: pre-wrap; }
+.codeCollapse > :global(.ant-collapse) > :global(.ant-collapse-item) > :global(.ant-collapse-header) {
+  padding: 6px 16px;
+  background: @bg-code-dark;
+  color: @text-tertiary;
+}
+
+.codeCollapse > :global(.ant-collapse) > :global(.ant-collapse-item) > :global(.ant-collapse-content) > :global(.ant-collapse-content-box) {
+  padding: 0;
+}
+
+.md {
+  font-size: 15px;
+
+  &.doc > :first-child {
+    margin-top: 0 !important;
+  }
+
+  /* --- 引用块 (Blockquote) - 融入品牌色 --- */
+  blockquote {
+    margin: 1em 0;
+    padding: 12px 16px;
+    color: rgba(0, 0, 0, 0.65);
+    background-color: fade(@brand-primary, 5%); // 使用品牌色的 5% 透明度作为背景
+    border-left: 4px solid @brand-primary; // 左侧边框使用鲜明的招行红
+    border-radius: 4px;
+
+    // 去掉引用块内最后一个段落的 margin，避免底部空白过多
+    p:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  /* --- 列表优化 --- */
+  ul,
+  ol {
+    padding-left: 24px;
+    margin-bottom: 1rem;
+    li {
+      margin-bottom: 6px;
+      // 可以选用一种更优雅的列表标记样式，或者保持默认
+    }
+  }
+
+  ul ol {
+    margin-top: 0.5rem;
+  }
+
+  ol ul {
+    margin-top: 0.5rem;
+  }
+
+  /* --- 代码块优化 (配合 Highlight.js) --- */
+  // markdown-to-jsx 会在我们的 code 外面包裹 pre
+  // 这里我们样式化这个 pre 容器
+  :global(.markdown-to-jsx-pre) {
+    // 有些版本的 markdown-to-jsx 会加这个类名，如果没有，直接用 pre 标签选择器
+    margin: 1em 0;
+    border-radius: 8px;
+    overflow: hidden; // 配合圆角
+    background-color: #282c34; // 确保背景色与引入的 highlight.js 主题一致(这里假设是 github-dark)
+
+    // 调整内部 code 的 padding
+    code[class*='hljs'] {
+      padding: 16px !important; // 覆盖 highlight.js 默认可能较小的 padding
+      font-size: 90%;
+      line-height: 1.5;
+    }
+  }
+
+  /* --- 表格样式 --- */
+  table {
+    width: 100%;
+    margin-bottom: 1rem;
+    border-collapse: collapse;
+    border-spacing: 0;
+    font-size: 14px;
+
+    th,
+    td {
+      padding: 12px 16px;
+      border: 1px solid #f0f0f0;
+      text-align: left;
+      min-width: 100px; /* 最小宽度保护 */
+      word-break: break-word;
+    }
+
+    th {
+      font-weight: 500;
+      color: #000000d9;
+      background: #fafafa;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    tr:hover {
+      background-color: #fafafa; /* 鼠标悬浮反馈 */
+    }
+  }
+}
+
+ul.md,
+ol.md {
+  padding-left: 24px;
+  margin-bottom: 1rem;
+  li {
+    margin-bottom: 6px;
+    // 可以选用一种更优雅的列表标记样式，或者保持默认
+  }
+}
+
+ul.md ol.md {
+  margin-top: 0.5rem;
+}
+
+ol.md ul.md {
+  margin-top: 0.5rem;
+}
+
+table.md {
+  width: 100%;
+  margin-bottom: 1rem;
+  border-collapse: collapse;
+  border-spacing: 0;
+  font-size: 14px;
+
+  th,
+  td {
+    padding: 12px 16px;
+    border: 1px solid #f0f0f0;
+    text-align: left;
+    min-width: 100px; /* 最小宽度保护 */
+    word-break: break-word;
+  }
+
+  th {
+    font-weight: 500;
+    color: #000000d9;
+    background: #fafafa;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  tr:hover {
+    background-color: #fafafa; /* 鼠标悬浮反馈 */
+  }
+}
+
+/* --- 引用块 (Blockquote) - 融入品牌色 --- */
+blockquote.md {
+  margin: 1em 0;
+  padding: 12px 16px;
+  color: rgba(0, 0, 0, 0.65);
+  background-color: fade(@brand-primary, 5%); // 使用品牌色的 5% 透明度作为背景
+  border-left: 4px solid @brand-primary; // 左侧边框使用鲜明的招行红
+  border-radius: 4px;
+
+  // 去掉引用块内最后一个段落的 margin，避免底部空白过多
+  p:last-child {
+    margin-bottom: 0;
+  }
+}
+
+:global(.markdown-to-jsx-pre).md {
+  // 有些版本的 markdown-to-jsx 会加这个类名，如果没有，直接用 pre 标签选择器
+  margin: 1em 0;
+  border-radius: 8px;
+  overflow: hidden; // 配合圆角
+  background-color: #282c34; // 确保背景色与引入的 highlight.js 主题一致(这里假设是 github-dark)
+
+  // 调整内部 code 的 padding
+  code[class*='hljs'] {
+    padding: 16px !important; // 覆盖 highlight.js 默认可能较小的 padding
+    font-size: 90%;
+    line-height: 1.5;
+  }
+}
+
+/* --- 标题优化 --- */
+.heading {
+  // Antd Title 默认 margin 有点大，在文档里紧凑点更好
+  &:global(.ant-typography) {
+    margin-bottom: 1rem;
+    font-weight: 600;
+  }
+}
+
+.paragraph,
+:global(.paragraph) {
+  margin-bottom: 1rem;
+}
+
+/* --- 链接颜色强调 --- */
+.link {
+  // 强制使用招行红，强调交互感
+  &:global(.ant-typography) {
+    color: @brand-primary;
+    &:hover {
+      // 计算一个稍微亮一点的颜色用于 hover，增加交互反馈
+      color: lighten(@brand-primary, 10%);
+    }
+  }
+}
+
+/* --- 图片容器调整 --- */
+.image {
+  margin: 1em 0; // 给图片上下加点间距
+}
+
+.cursor {
+  font-size: inherit;
+  line-height: inherit;
+  display: inline-block;
+  margin-left: 1px;
+  animation: cursor-blink 1s step-end infinite;
+  vertical-align: baseline;
+  font-weight: 200;
+}
+
+// .streamingMd.isStreaming > *:last-child::after {
+//   content: '|';
+//   animation: cursor-blink 1s step-end infinite;
+//   margin-left: 2px;
+//   vertical-align: middle;
+// }
+
+@keyframes cursor-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.codeCollapse {
+  border-radius: @radius-mid;
+  overflow: hidden;
+
+  :global(.ant-collapse-item) {
+    border-radius: @radius-mid;
+    overflow: hidden;
+  }
+
+  :global(.ant-collapse-arrow) {
+    color: @text-tertiary;
+  }
+  :global(.ant-collapse-content) {
+    border-top-color: @text-sidebar !important;
+    border-radius: 0 0 @radius-mid @radius-mid;
+    overflow: hidden;
+  }
+  :global(.ant-collapse-content-box) {
+    padding: 0;
+  }
+  :global(.ant-collapse-header) {
+    border-radius: @radius-mid @radius-mid 0 0 !important;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 16px;
+    background: @bg-code-dark;
+    color: @text-tertiary !important;
+    font-size: 12px;
+  }
+
+  :global(.ant-collapse-item:not(.ant-collapse-item-active) > .ant-collapse-header) {
+    border-radius: @radius-mid !important;
+  }
+}
+
+.copyIcon {
+  cursor: pointer;
+  font-size: 14px;
+  &:global(.ant-btn) { width: auto; height: auto; padding: 0; color: @text-tertiary; line-height: 1; }
+
+  &:hover {
+    color: @text-light;
+  }
+}

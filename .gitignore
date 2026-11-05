@@ -28,4 +28,5 @@ coverage/
 
 # pnpm-lock.yaml is the project's committed lockfile
 package-lock.json
+pnpm-lock.yaml
 yarn.lock

@@ -63,6 +63,15 @@ for (const [name, files, message] of [
   ['host alias', {
     'src/chat/ui/index.ts': "import '@/services/fin-work';",
   }, /not declared: @\/services/],
+  ['named context injection', {
+    'src/chat/ui/index.ts': "import { useContext as readContext } from 'react';",
+  }, /injected through props/],
+  ['context provider', {
+    'src/chat/ui/index.ts': "import { createContext } from 'react';",
+  }, /injected through props/],
+  ['namespace context injection', {
+    'src/chat/ui/index.ts': "import * as React from 'react'; React.useContext(null);",
+  }, /injected through props/],
   ['missing relative module', {
     'src/chat/ui/index.ts': "export * from './missing';",
   }, /must resolve inside src.*missing/],
