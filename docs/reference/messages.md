@@ -1,11 +1,13 @@
 ---
 title: 消息布局
-description: 用户、助手、系统消息与消息容器的用法。
+description: 用户、助手、OPC 协作和系统消息的布局。
 ---
 
 # 消息布局
 
 组合 `MessageItem`、`UserMessage`、`AiMessage` 和 `SystemMessage` 展示不同角色的消息。
+
+协作回答使用 `role="opc_assistant"`，在消息容器中组合 `OpcAnswer`。参见 [OPC 协作对话](/reference/opc)。
 
 <code src="../examples/message-layout.tsx"></code>
 
@@ -17,7 +19,7 @@ description: 用户、助手、系统消息与消息容器的用法。
 
 | 属性 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
-| role | `'user' \| 'assistant' \| 'system'` | 必填 | 消息角色，写入容器的 `data-message-role` |
+| role | `'user' \| 'assistant' \| 'opc_assistant' \| 'system'` | 必填 | 消息角色，写入容器的 `data-message-role` |
 | header | `ReactNode` | — | 顶部内容 |
 | children | `ReactNode` | — | 消息正文 |
 | footer | `ReactNode` | — | 底部内容 |

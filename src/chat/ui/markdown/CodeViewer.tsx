@@ -1,5 +1,4 @@
 import { memo, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import './highlight.less';
 
 import styles from './code.module.less';
 import { escapeHtml, highlightCodeSnippet } from './highlight';

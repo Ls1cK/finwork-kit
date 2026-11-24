@@ -10,6 +10,7 @@ export default defineConfig({
   title: 'FinWork Kit · 组件与 SDK',
   favicons: [logo],
   theme: {
+    'primary-color': '#c8152d',
     '@c-primary': '#c8152d',
     '@c-primary-dark': '#ff9aa9',
     '@c-site-bg-dark': '#111318',
@@ -39,6 +40,7 @@ export default defineConfig({
         { title: '消息布局', link: '/reference/messages' },
         { title: '消息内容', link: '/reference/content' },
         { title: '子智能体', link: '/reference/subagents' },
+        { title: 'OPC 协作对话', link: '/reference/opc' },
         { title: '文件展示', link: '/reference/files' },
         { title: '消息操作', link: '/reference/actions' },
         { title: 'Markdown 与引用', link: '/reference/markdown' },

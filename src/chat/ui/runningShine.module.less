@@ -1,0 +1,30 @@
+@import './tokens.less';
+
+@media (prefers-reduced-motion: no-preference) {
+  .runningShine {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+
+    &::before {
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background: linear-gradient(120deg, transparent 30%, color-mix(in srgb, @info 20%, transparent) 50%, transparent 70%);
+      animation: runningShineSweep 2.8s linear infinite;
+      pointer-events: none;
+      content: '';
+    }
+  }
+}
+
+@keyframes runningShineSweep {
+  from {
+    transform: translateX(-100%);
+  }
+
+  55%,
+  to {
+    transform: translateX(100%);
+  }
+}

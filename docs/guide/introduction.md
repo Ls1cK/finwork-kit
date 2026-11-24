@@ -23,12 +23,12 @@ v0.1.0 已提供上述场景中的消息展示与交互组件。任务请求、�
 | --- | --- |
 | [快速开始](/guide/getting-started) | 如何安装并完成首次使用 |
 | [组件](/reference/overview) | 组件能力、使用示例和 API |
-| [SDK](/sdk/overview) | SDK 模块能力与当前状态 |
+| [SDK](/sdk/overview) | 流式归并、历史回放与 SDK 接入示例 |
 
 ## 当前状态
 
-v0.1.0 是首个可用 UI 版本，提供 29 个消息、文件、操作、Markdown 和代码展示组件。组件通过显式 props、回调和渲染插槽组合。
+Kit 提供消息布局、文件、操作、Markdown 和代码展示组件，以及 OPC 协作时间线和专家执行面板。组件通过显式 props、回调和渲染插槽组合。
 
 正文默认使用流式 Markdown 渲染，支持通过 `renderContent` 接管展示。内容分发支持自定义消息类型与单项包装，组件清单和使用示例见[组件](/reference/overview)。
 
-SSE 与历史解析能力继续开发，模块状态见 [SDK](/sdk/overview)。
+SDK 为普通对话和 OPC 提供流式事件归并与历史回放，宿主负责请求、会话状态存储和页面交互。见[接入指南](/sdk/overview)。

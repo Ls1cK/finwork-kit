@@ -1,15 +1,17 @@
 # FinWork Kit
 
-当前版本为 **0.1.0**，首批 UI 组件已可使用，提供消息编排、流式 Markdown、代码高亮、文件、引用与自定义操作栏。当前使用本地 file 接入，内网源发布由使用方维护。
+当前包版本为 **0.1.0**。库源码提供消息编排、流式 Markdown、代码高亮、文件、引用、自定义操作栏，以及 OPC 协作时间线与专家执行面板。可通过本地 file 或 link 消费构建产物，内网源发布由使用方维护。
 
 FinWork 是面向金融与办公场景的专业级任务执行智能体产品。FinWork Kit 是支撑其体验复用的组件与工具库，npm 包名为 `@lz19.02/finwork-kit`。一个仓库维护两个交付物：
 
 - npm 库：提供 UI 组件、处理 FinWork Agent 历史数据的 core-detail 与流式数据的 core-sse，以业务子入口扩展。
 - dumi 文档站：维护组件与 core 工具函数的介绍、API 和使用案例。
 
-当前已提供消息 UI、Markdown 与流式展示组件、源码依赖护栏及可重复的包消费检查。消息容器、内容分发与单项组件、工具展示、子智能体、文件和操作栏均通过 props 接收数据与回调。点赞点踩的业务表单和弹窗由宿主维护。FinPlus MessageItem 采用配置控制的 Kit/原组件双路接入。SSE 和历史解析仍处于骨架阶段。
+当前已提供消息 UI、Markdown 与流式展示组件、源码依赖护栏及可重复的包消费检查。消息容器、内容分发与单项组件、工具展示、子智能体、文件和操作栏均通过 props 接收数据与回调。点赞点踩的业务表单和弹窗由宿主维护。SDK 通过纯函数归并普通对话与 OPC 的实时事件和历史记录，宿主负责连接与状态持久化。
 
-文档阅读入口：[介绍](docs/guide/introduction.md) · [快速开始](docs/guide/getting-started.md) · [组件与 SDK](docs/reference/overview.md)。
+文档阅读入口：[介绍](docs/guide/introduction.md) · [快速开始](docs/guide/getting-started.md) · [组件](docs/reference/overview.md) · [SDK](docs/sdk/overview.md)。
+
+OPC 界面定制和宿主接入边界见 [OPC 协作对话](docs/reference/opc.md)与[开发与验证说明](MAINTAINING.md#opc-协作对话设计)。
 
 ## 代码与构建边界
 
@@ -28,12 +30,14 @@ FinWork 是面向金融与办公场景的专业级任务执行智能体产品。
 
 ## 入口
 
-- @lz19.02/finwork-kit/chat/core-sse：testCoreSse() 返回 core-sse:ok。
-- @lz19.02/finwork-kit/chat/core-detail：testCoreDetail() 返回 core-detail:ok。
-- @lz19.02/finwork-kit/chat/ui 提供消息 UI 及其公开类型，组件清单与接口边界见 [组件与 SDK](docs/reference/overview.md)。
+- `@lz19.02/finwork-kit/chat/core-sse` 解码单帧并按批归并单轮状态。
+- `@lz19.02/finwork-kit/chat/core-detail` 解析历史帧并复用相同归并器回放任务记录。
+- `@lz19.02/finwork-kit/chat/ui` 提供消息 UI 及其公开类型，组件清单与接口边界见[组件](docs/reference/overview.md)。
 - @lz19.02/finwork-kit/chat/style.css：UI 样式，使用 UI 时显式导入。
 
-第一阶段提供 ESM 与 TypeScript 声明。React/react-dom 以 peerDependencies 共享宿主运行时，兼容范围为 `^18.3.1`。Ant Design 4.24.8、@ant-design/icons 4.8.3、ahooks 3.9.7、markdown-to-jsx 8.0.0、yaml 2.9.0、highlight.js 11.11.1 和 highlightjs-vue 1.0.0 由 Kit 的 dependencies 自动安装。同版本可由包管理器去重；宿主直接使用这些包时应自行声明对应依赖。UI 仅需显式导入 `@lz19.02/finwork-kit/chat/style.css`，其中包含 Ant Design 基础样式及高亮主题。单包安装会带上 UI 依赖，core 源码、运行入口和声明保持独立。
+第一阶段提供 ESM 与 TypeScript 声明。React/react-dom（`^18.3.1`）、antd（`^4.24.8`）与 @ant-design/icons（`^4.8.3`）通过 peerDependencies 共享宿主实例。ahooks、Markdown、YAML 和高亮依赖由 Kit 自动安装。宿主在应用入口加载自己的 Ant Design 主题 CSS 和 `@lz19.02/finwork-kit/chat/style.css`，后者仅包含作用域内的组件及高亮样式。
+
+Ant Design 组件沿用宿主 `ConfigProvider`。Kit 自有颜色读取 `--finwork-*` CSS 变量，主色优先使用 `--finwork-primary-color`，随后读取 `--ant-primary-color`，缺省继承文字颜色。Antd v4 的静态 Less 主色需要宿主映射为 CSS 变量，具体配置与变量表见[快速开始](docs/guide/getting-started.md)。将两份 CSS 放在首屏入口，可以在懒加载 UI 前完成样式加载。
 
 ## 构建命令与流水线配置
 
@@ -89,7 +93,7 @@ pnpm dev
 
 ## npm link
 
-FinPlus 当前使用 `file:../finwork-kit`。两个仓库放在同一父目录下，先在 Kit 执行 `pnpm build:lib`，再在 FinPlus 执行 `pnpm install`，刷新本地包副本。消费路径指向 `dist` 公开入口。Kit 源码更新后需要再次构建并刷新 file 依赖。FinPlus 已配置 React、React DOM 和 Ant Design 的 dedupe。
+FinPlus 的 `file:../finwork-kit` 接入已撤销。其他本地消费项目可在 Kit 执行 `pnpm build:lib` 后安装 file 依赖，源码更新后重新构建并刷新本地包副本。消费路径指向 `dist` 公开入口。
 
 先在本项目执行 pnpm build:lib，再执行 npm link。在 npm 管理的消费方执行 npm link @lz19.02/finwork-kit，并从上述公开子入口导入。不要导入 src 或 dist 深路径。
 
@@ -97,7 +101,7 @@ FinPlus 当前使用 `file:../finwork-kit`。两个仓库放在同一父目录�
 
 外部联调时，分别在两个终端运行 pnpm dev:lib、pnpm dev:types，监听 JS/CSS 和声明。首次使用先执行完整 build。watch 模式不清理 dist；完整 build 会重建目录，运行 watch 时不要交叉执行完整 build。
 
-React/react-dom 是外部 peer，但 symlink 可能让开发依赖产生重复 React。Vite 消费者应配置 resolve.dedupe 为 react、react-dom；其他构建器需要相应的单实例解析配置。不要未经验证统一开启 preserveSymlinks。
+React/react-dom、antd 与图标是外部 peer，symlink 联调时 Vite 消费者应将 react、react-dom、antd、@ant-design/icons 加入 resolve.dedupe；其他构建器需要相应的单实例解析配置。
 
 link 与 tarball 消费是不同验收项；当前两种方式均已通过独立 npm 消费者的导入、类型检查、UI 静态渲染和 Vite 构建。本阶段不执行 npm publish。
 

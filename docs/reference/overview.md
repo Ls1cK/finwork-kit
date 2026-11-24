@@ -5,7 +5,7 @@ description: 浏览 FinWork Kit 的组件示例与 API。
 
 # 组件总览
 
-v0.1.0 提供 29 个可组合 UI 组件，公开入口为 `@lz19.02/finwork-kit/chat/ui`。
+组件从 `@lz19.02/finwork-kit/chat/ui` 导出，支持普通消息和 OPC 协作对话两类布局。
 
 ## 组件
 
@@ -20,6 +20,7 @@ v0.1.0 提供 29 个可组合 UI 组件，公开入口为 `@lz19.02/finwork-kit/
 | 消息容器与角色布局 | [消息布局](/reference/messages) |
 | 内容分发、正文、思考、工具与折叠 | [消息内容](/reference/content) |
 | 子智能体卡片与列表 | [子智能体](/reference/subagents) |
+| OPC 单轮时间线与专家执行面板 | [OPC 协作对话](/reference/opc) |
 | 文件卡片、列表与输出区域 | [文件展示](/reference/files) |
 | 自定义操作栏、追问与完成状态 | [消息操作](/reference/actions) |
 | Markdown、代码块与引用 | [Markdown 与引用](/reference/markdown) |
@@ -42,6 +43,12 @@ v0.1.0 提供 29 个可组合 UI 组件，公开入口为 `@lz19.02/finwork-kit/
 | `TaskCompletedSplit` | `process`、`conclusion`、`title`、展开属性，过程与结论布局 |
 | `MultiSubAgentCard<T>` | `subagents`、`title`、`onSelect`、`renderSubAgent`，子智能体列表 |
 | `SubAgentListItem<T>` | `subagent`、`label`、`avatar`、`color`、`prompt`、`onSelect`，独立子智能体卡片 |
+| `OpcAnswer` | `timeline`、`error`、`footer`、`onOpenExecution`，在统一消息列表中展示 OPC 回答 |
+| `OpcTimeline` | `timeline`、`onOpenExecution`，单独展示团长回复、任务派发和团员回传 |
+| `OpcRound` | `timeline`、`userMessage`、`footer`、`onOpenExecution`，独立展示一轮 OPC 对话 |
+| `OpcExpertPanel` | `members`、`memberId`、`tasks`、`taskId`、选择回调和正文插槽，专家执行详情 |
+| `OpcAvatar` | `role`、`src`、`size`，团长或团员头像 |
+| `OpcStatus` | `status`、`label`、`action`，执行状态及可选的详情入口 |
 | `MessageFileCard<T>` | `file`、`title`、`icon`、`actions`、`onPreview`、`onDownload`、`downloading`，单文件卡片 |
 | `MessageFileList<T>` | `files`、`renderFile`、`getFileKey`、`onPreview`，横向文件列表 |
 | `SkillOutputCard<T>` | 文件卡片属性及 `isSkillDebugTask`，技能文件卡片 |
@@ -99,9 +106,9 @@ v0.1.0 提供 29 个可组合 UI 组件，公开入口为 `@lz19.02/finwork-kit/
 
 ### 环境与样式
 
-React 与 React DOM 是共享运行时，通过 peerDependencies 声明兼容范围 `^18.3.1`。Ant Design 4.24.8、@ant-design/icons 4.8.3、ahooks 3.9.7、markdown-to-jsx 8.0.0、yaml 2.9.0、highlight.js 11.11.1 和 highlightjs-vue 1.0.0 均为 Kit 的普通 dependencies，安装 Kit 时自动安装。宿主已有相同版本时可由包管理器去重；版本或解析条件不同时可能保留独立副本。
+React/react-dom（`^18.3.1`）、Ant Design（`^4.24.8`）与图标（`^4.8.3`）通过 peerDependencies 共享宿主实例。其他实现依赖由 Kit 自动安装。Kit 沿用宿主外层 ConfigProvider，自有颜色通过 CSS 变量配置。
 
-使用方导入 `@lz19.02/finwork-kit/chat/style.css` 即可加载组件、Ant Design 基础和高亮样式。Kit 提供编译后的 CSS，内部使用 CSS Modules + Less。当前为单包发布，安装任何子入口都会安装该包声明的依赖；core 的运行与类型入口保持纯逻辑隔离。
+使用方在应用入口导入宿主 Ant Design 主题与 `@lz19.02/finwork-kit/chat/style.css`，Kit CSS 仅含作用域内的组件和高亮样式。Kit 提供编译后的 CSS，内部使用 CSS Modules + Less。主题变量、弹层继承及静态 CSS 加载方式见[快速开始](/guide/getting-started#宿主配置与主题)。当前为单包发布，core 的运行与类型入口保持纯逻辑隔离。
 
 ## 如何开始
 

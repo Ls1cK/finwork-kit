@@ -1,8 +1,9 @@
-@brand-primary: #a30030;
+@import '../tokens.less';
+@brand-primary: @primary;
 @radius-mid: 12px;
-@text-tertiary: #999;
-@text-secondary: #666;
-@text-sidebar: #444;
-@text-light: #fff;
-@bg-code-dark: #2d323b;
+@text-tertiary: @tertiary;
+@text-secondary: @secondary;
+@text-sidebar: var(--finwork-code-border-color, #444);
+@text-light: var(--finwork-code-text-color, #fff);
+@bg-code-dark: var(--finwork-code-bg-color, #2d323b);
 @spacing-lg: 16px;

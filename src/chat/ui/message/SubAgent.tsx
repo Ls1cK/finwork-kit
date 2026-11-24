@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { CheckCircleTwoTone, HourglassTwoTone, LoadingOutlined, RobotOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined, HourglassOutlined, LoadingOutlined, RobotOutlined } from '@ant-design/icons';
 import { Button, Popover, Tag } from 'antd';
 import { MarkdownViewer } from '../markdown';
 import { RandomNumAvatar } from './RandomNumAvatar';
@@ -17,7 +17,7 @@ export interface SubAgentListItemProps<T extends SubAgent = SubAgent> extends Me
 }
 
 export function SubAgentListItem<T extends SubAgent>({
-  subagent, label = '智能体', avatar, color = '#a30030', prompt, onSelect, className, style,
+  subagent, label = '智能体', avatar, color, prompt, onSelect, className, style,
 }: SubAgentListItemProps<T>) {
   return (
     <div className={`${styles.subAgentCard} ${className ?? ''}`} style={style}>
@@ -44,7 +44,7 @@ export function SubAgentListItem<T extends SubAgent>({
               <span className={styles.secondary}>{subagent.creating ? '正在创建...' : subagent.description || ' '}</span>
             </span>
             <span className={styles.agentStatus} style={{ color }} aria-label={subagent.creating ? '创建中' : subagent.excuting ? '执行中' : '任务结束'}>
-              {subagent.creating ? <LoadingOutlined /> : subagent.excuting ? <HourglassTwoTone spin twoToneColor={color} /> : <><Tag color={color}>任务结束</Tag><CheckCircleTwoTone twoToneColor={color} /></>}
+              {subagent.creating ? <LoadingOutlined /> : subagent.excuting ? <HourglassOutlined spin /> : <><Tag className={styles.agentTag} color={color}>任务结束</Tag><CheckCircleOutlined /></>}
             </span>
           </Button>
         </span>
@@ -67,7 +67,7 @@ export function MultiSubAgentCard<T extends SubAgent>({
   const executing = subagents.some((agent) => agent.excuting);
   const label = creating ? '正在创建智能体集群...' : executing ? '智能体集群正在执行任务...' : '智能体集群任务执行结束';
   return (
-    <MessageCollapse {...props} className={`${styles.subAgentCollapse} ${props.className ?? ''}`} arrowPlacement="end" title={title ?? <span><span className={styles.clusterStatus}>{creating ? <LoadingOutlined /> : executing ? <HourglassTwoTone spin twoToneColor="#a30030" /> : <CheckCircleTwoTone twoToneColor="#a30030" />}</span>{label}</span>} defaultExpanded={defaultExpanded} ghost={false}>
+    <MessageCollapse {...props} className={`${styles.subAgentCollapse} ${props.className ?? ''}`} arrowPlacement="end" title={title ?? <span><span className={styles.clusterStatus}>{creating ? <LoadingOutlined /> : executing ? <HourglassOutlined spin /> : <CheckCircleOutlined />}</span>{label}</span>} defaultExpanded={defaultExpanded} ghost={false}>
       <div className={styles.subAgentList}>
         {subagents.map((subagent, index) => (
           <div key={subagent.id}>

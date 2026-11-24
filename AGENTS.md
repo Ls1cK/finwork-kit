@@ -5,7 +5,7 @@
 - FinWork Kit is one npm package named @lz19.02/finwork-kit. It is not a workspace or monorepo.
 - This repository maintains two deliverables: the npm library (UI, Agent detail and SSE tools) and its dumi documentation site.
 - First-stage public entries are chat/core-sse, chat/core-detail, chat/ui and chat/style.css.
-- Core SSE/detail functions remain scaffolding examples. Chat UI provides props-driven message primitives extracted from FinPlus, with business integration owned by the consumer.
+- Core SSE/detail expose pure functions for ordinary and OPC rounds. Chat UI provides props-driven message primitives extracted from FinPlus. Consumers own transport, persistence and business integration.
 - Future capabilities belong under their own domain namespace; do not aggregate UI into pure core entries.
 
 ## Source boundaries
@@ -13,7 +13,7 @@
 - Library code belongs in src/. Core must not import React, DOM, CSS, application stores or docs code.
 - UI consumes explicit props and callbacks. Do not add FinPlus services, routes, storage, analytics SDKs or business state.
 - Documentation, usage examples and site assets belong in docs/. Do not create a separate demo app.
-- UI examples follow the verified FinPlus adapter patterns and use public library imports. Core SSE/detail examples remain placeholders until those implementations are available.
+- Examples use public library imports. UI examples follow the verified FinPlus adapter patterns. Core examples keep transport and state storage in the consumer.
 - Keep library and documentation build configuration and output separate.
 - Documentation and AGENTS.md are versioned source. Generated site files, caches and credentials are not.
 
@@ -24,7 +24,8 @@
 - Do not overwrite unrelated user changes or copy credentials/internal publishing configuration into this repository.
 - Keep dependency versions pinned and commit pnpm-lock.yaml. Use pnpm 8.12.1.
 - UI styles use CSS Modules + Less. Consumers should receive compiled CSS, not require a Less or source-alias setup.
-- React/react-dom and their subpaths stay external and share the host runtime through peer declarations. UI implementation dependencies belong in dependencies. Test linked consumers.
+- React/react-dom, Ant Design v4 and icons stay external and share the host runtime through peer declarations. Other UI implementation dependencies belong in dependencies. Test linked consumers.
+- Hosts load their themed Ant Design CSS and chat/style.css at the app entry. Kit ships scoped component/highlight CSS and inherits --finwork-* / Ant Design CSS variables. Keep global resets and runtime style loaders out of the library.
 - Build/package changes must preserve actual exports, declaration paths, styles and file whitelist.
 
 ## Build and delivery contracts

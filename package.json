@@ -21,7 +21,9 @@
     }
   },
   "sideEffects": [
-    "**/*.css"
+    "**/*.css",
+    "**/*.less",
+    "./src/chat/ui/style.ts"
   ],
   "exports": {
     "./chat/core-sse": {
@@ -57,15 +59,15 @@
     "prepack": "pnpm build:lib"
   },
   "dependencies": {
-    "@ant-design/icons": "4.8.3",
     "ahooks": "3.9.7",
-    "antd": "4.24.8",
     "highlight.js": "11.11.1",
     "highlightjs-vue": "1.0.0",
     "markdown-to-jsx": "8.0.0",
     "yaml": "2.9.0"
   },
   "peerDependencies": {
+    "@ant-design/icons": "^4.8.3",
+    "antd": "^4.24.8",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
@@ -77,11 +79,13 @@
     }
   },
   "devDependencies": {
+    "@ant-design/icons": "4.8.3",
     "@dicebear/core": "9.2.3",
     "@dicebear/lorelei": "9.2.3",
     "@types/node": "22.12.0",
     "@types/react": "18.3.31",
     "@types/react-dom": "18.3.7",
+    "antd": "4.24.8",
     "dumi": "2.4.21",
     "happy-dom": "20.3.7",
     "less": "4.6.7",

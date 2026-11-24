@@ -1,8 +1,9 @@
 import { memo, type ReactNode } from 'react';
-import { CheckCircleOutlined, CloseCircleOutlined, ExclamationCircleOutlined, LoadingOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined, CloseCircleOutlined, ExclamationCircleOutlined, HourglassOutlined, LoadingOutlined } from '@ant-design/icons';
 import { Divider, Input, Radio } from 'antd';
 import { MessageCollapse, type MessageCollapseProps } from './MessageCollapse';
 import type { MessageAppearanceProps, MessageTextRenderer } from './types';
+import motionStyles from '../runningShine.module.less';
 import styles from './message.module.less';
 import { StreamingMarkdownRenderer, StreamingTextRenderer, type StreamingMarkdownRendererProps } from '../markdown/StreamingMarkdownRenderer';
 import { MarkdownCodeBlock } from '../markdown/MarkdownCodeBlock';
@@ -41,8 +42,11 @@ export interface ThinkContentProps extends MessageAppearanceProps {
 export const ThinkContent = memo(function ThinkContent({
   content, isStreaming = false, title, renderContent, ...collapseProps
 }: ThinkContentProps) {
+  const heading = title ?? (isStreaming
+    ? <span className={motionStyles.runningShine} style={{ display: 'inline-block', verticalAlign: 'top' }}>正在思考中...</span>
+    : '已完成思考');
   return (
-    <MessageCollapse {...collapseProps} className={`${styles.thinkCollapse} ${collapseProps.className ?? ''}`} arrowPlacement="inline" title={title ?? (isStreaming ? '正在思考中...' : '已完成思考')}>
+    <MessageCollapse {...collapseProps} className={`${styles.thinkCollapse} ${collapseProps.className ?? ''}`} arrowPlacement="inline" title={heading}>
       <div className={`${styles.thinkContent} ${renderContent ? '' : styles.plainText}`} aria-busy={isStreaming}>
         {renderContent ? renderContent(content, isStreaming) : <StreamingTextRenderer content={content} isStreaming={isStreaming} />}
       </div>
@@ -61,10 +65,11 @@ export interface ToolCallMsgProps extends MessageAppearanceProps {
 export const ToolCallMsg = memo(function ToolCallMsg({
   label, detail, isStreaming = false, icon, children, className, style,
 }: ToolCallMsgProps) {
+  const cardClassName = isStreaming ? `${styles.toolCallCard} ${motionStyles.runningShine}` : styles.toolCallCard;
   return (
     <div className={`${styles.toolCall} ${className ?? ''}`} style={style}>
-      <div className={styles.toolCallCard} aria-busy={isStreaming}>
-        {icon ?? (isStreaming ? <LoadingOutlined /> : <CheckCircleOutlined />)}
+      <div className={cardClassName} aria-busy={isStreaming}>
+        {icon ?? (isStreaming ? <HourglassOutlined /> : <CheckCircleOutlined />)}
         <span>{label}</span>
         {detail && <span className={styles.truncate}>{detail}</span>}
       </div>

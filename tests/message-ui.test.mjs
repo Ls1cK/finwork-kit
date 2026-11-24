@@ -7,6 +7,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createElement as h, act } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createRoot } from 'react-dom/client';
+import { ConfigProvider } from 'antd';
 import { build } from 'vite';
 import { Window } from 'happy-dom';
 import less from 'less';
@@ -25,6 +26,131 @@ await build({
 });
 const ui = await import(pathToFileURL(join(workspace, 'dist/ui.mjs')).href);
 const html = (component, props) => renderToStaticMarkup(h(component, props));
+const cssName = readdirSync(join(workspace, 'dist')).find((name) => name.endsWith('.css'));
+const kitCss = readFileSync(join(workspace, 'dist', cssName), 'utf8');
+
+test('standalone stylesheet entry includes the same CSS as the components', async () => {
+  const result = await build({
+    configFile: false, root: rootDirectory, logLevel: 'warn',
+    build: {
+      write: false,
+      lib: { entry: join(rootDirectory, 'src/chat/ui/style.ts'), formats: ['es'], fileName: () => 'style.mjs' },
+      // 比较样式收集范围，避免未使用的 CSS Module 导出被测试构建裁剪。
+      rollupOptions: { treeshake: false },
+    },
+  });
+  const output = (Array.isArray(result) ? result : [result]).flatMap((bundle) => bundle.output);
+  const css = output.find((file) => file.type === 'asset' && file.fileName.endsWith('.css'));
+  assert.ok(css, 'Missing standalone stylesheet');
+  assert.equal(String(css.source), kitCss);
+});
+
+test('source stylesheet entry and Less imports survive documentation tree shaking', () => {
+  const { sideEffects } = JSON.parse(readFileSync(join(rootDirectory, 'package.json'), 'utf8'));
+  for (const entry of ['**/*.css', '**/*.less', './src/chat/ui/style.ts']) {
+    assert.ok(sideEffects.includes(entry), 'Missing stylesheet side effect: ' + entry);
+  }
+});
+
+test('component CSS is scoped, themeable and independent of Ant Design base styles', async () => {
+  assert.doesNotMatch(kitCss, /\.ant-btn|:root|#1890ff|#a30030/i);
+  assert.ok(/var\(--finwork-primary-color,\s*var\(--ant-primary-color,\s*currentColor\)\)/.test(kitCss));
+  const window = new Window();
+  try {
+    const { document } = window;
+    const hostStyle = document.createElement('style');
+    hostStyle.textContent = '.ant-btn { color: green; } .paragraph { margin-bottom: 3px; } .hljs-keyword { color: purple; }';
+    document.head.append(hostStyle);
+    document.body.innerHTML = '<button class="ant-btn">Host</button><p class="paragraph">Host paragraph</p><code><span class="hljs-keyword">Host code</span></code>';
+    const hostElements = [...document.body.children, document.querySelector('.hljs-keyword')];
+    const snapshot = () => hostElements.map((element) => {
+      const style = window.getComputedStyle(element);
+      return [style.color, style.marginBottom, style.display];
+    });
+    const before = snapshot();
+    const style = document.createElement('style');
+    style.textContent = kitCss;
+    document.head.append(style);
+    assert.deepEqual(snapshot(), before);
+
+    const kit = document.createElement('section');
+    kit.innerHTML = html(ui.AiMessage, { title: 'Themed agent' }) + html(ui.CodeViewer, { language: 'text', content: 'code' });
+    document.body.append(kit);
+    const header = kit.querySelector('[class*="_aiHeader_"]');
+    for (const [variable, color] of [['--ant-primary-color', '#123456'], ['--finwork-primary-color', '#654321']]) {
+      kit.style.setProperty(variable, color);
+      assert.equal(window.getComputedStyle(header).color, color);
+    }
+    const keyword = document.createElement('span');
+    keyword.className = 'hljs-keyword';
+    kit.querySelector('code').append(keyword);
+    assert.notEqual(window.getComputedStyle(keyword).color, 'purple');
+  } finally {
+    await window.happyDOM.close();
+  }
+});
+
+test('host ConfigProvider supplies prefix, direction and component size', () => {
+  const result = renderToStaticMarkup(h(ConfigProvider, { prefixCls: 'host', direction: 'rtl', componentSize: 'large' },
+    h(ui.SuggestedQuestions, { questions: ['Host question'], onSelect() {} })));
+  assert.match(result, /host-btn-lg/);
+  assert.match(result, /host-btn-rtl/);
+  assert.doesNotMatch(result, /ant-btn/);
+});
+
+const opcTimeline = [
+  { id: 'opening', kind: 'leader', name: '团长甲', isStreaming: true },
+  {
+    id: 'dispatch', kind: 'dispatch',
+    assignments: [{ id: 'research', member: '专家甲', prompt: '核对记录', status: { status: 'idle', label: '等待执行' } }],
+  },
+  {
+    id: 'report', kind: 'report', name: '专家乙', status: { status: 'completed', label: '已回传' },
+    content: '**核对完成**', target: { kind: 'reply', id: 'research' },
+  },
+];
+
+test('OPC preserves timeline order and supports reading without execution actions', () => {
+  const result = html(ui.OpcRound, { id: 'round', timeline: opcTimeline, error: '<error>', footer: 'footer' });
+  assert.match(result, /id="round" data-chat-row-id="round"/);
+  assert.match(result, /data-kind="leader".*正在回复.*data-kind="dispatch".*核对记录.*data-kind="report".*<strong>核对完成<\/strong>/);
+  assert.match(result, /role="alert">&lt;error&gt;.*footer/);
+  assert.doesNotMatch(result, /<button/);
+  assert.doesNotMatch(html(ui.OpcRound, { timeline: [] }), /协作时间线/);
+  const shared = html(ui.MessageItem, {
+    role: 'opc_assistant',
+    children: h(ui.OpcAnswer, { timeline: opcTimeline, error: '连接异常', footer: '共享页脚' }),
+  });
+  assert.match(shared, /data-message-role="opc_assistant"/);
+  assert.match(shared, /aria-label="协作时间线"/);
+  assert.match(shared, /role="alert">连接异常/);
+  assert.match(shared, /共享页脚/);
+  const questionOnly = html(ui.OpcAnswer, {
+    timeline: [],
+    contentList: [
+      { id: 'ask', type: 'ASK_USER_QUESTION', question: '选择方向？', options: [{ id: 'a', text: '夜景' }], userAnswer: { optionId: 'a' } },
+      { id: 'text', type: 'ASSISTANT_MSG', content: 'visible only on the timeline' },
+    ],
+  });
+  assert.match(questionOnly, /选择方向？.*夜景/);
+  assert.doesNotMatch(questionOnly, /visible only on the timeline/);
+  assert.match(html(ui.OpcExpertPanel, {
+    members: [{ id: 'worker', name: '专家甲' }], memberId: 'worker',
+    tasks: [], taskId: 'missing', onMemberChange() {}, onTaskChange() {},
+  }), /暂无专家执行记录/);
+});
+
+test('only active thinking, tool calls and OPC statuses use the reduced-motion-aware shine', () => {
+  assert.match(kitCss, /@media\s*\(prefers-reduced-motion:\s*no-preference\)[\s\S]*runningShine/);
+  for (const [component, base, active] of [
+    [ui.ThinkContent, { content: 'think' }, { isStreaming: true }],
+    [ui.ToolCallMsg, { label: 'Read' }, { isStreaming: true }],
+    [ui.OpcStatus, { status: 'completed', label: '任务' }, { status: 'running' }],
+  ]) {
+    assert.match(html(component, { ...base, ...active }), /runningShine/);
+    assert.doesNotMatch(html(component, base), /runningShine/);
+  }
+});
 
 test('document and demo headings follow the light and dark site palette', async () => {
   const { css } = await less.render(readFileSync(join(rootDirectory, 'docs/styles/site.less'), 'utf8'));
@@ -51,11 +177,11 @@ test('subagent status keeps its color and flex layout inside Ant Design buttons'
   assert.match(finished, /任务结束<\/span>/);
   assert.match(finished, /<button[^>]*class="[^"]*ant-btn[^"]*_subAgent_/);
   assert.doesNotMatch(finished, /ant-popover-disabled-compatible-wrapper/);
-  assert.match(finished, /background-color:#a30030/);
-  assert.match(finished, /fill="#a30030"/);
+  assert.doesNotMatch(finished, /#a30030|#1890ff/);
+  assert.match(finished, /anticon-check-circle/);
   const custom = html(ui.SubAgentListItem, { subagent: { id: 'custom' }, color: '#1890ff' });
   assert.match(custom, /background-color:#1890ff/);
-  assert.match(custom, /fill="#1890ff"/);
+  assert.match(custom, /color:#1890ff/);
   for (const subagent of [{ id: 'creating', creating: true }, { id: 'running', excuting: true }]) {
     assert.doesNotMatch(html(ui.SubAgentListItem, { subagent }), /任务结束/);
   }
@@ -233,6 +359,21 @@ test('controlled expansion and callbacks work without a Provider', async () => {
     await click(container.querySelector('.ant-collapse-header'));
     assert.equal(container.querySelector('.ant-collapse-header').getAttribute('aria-expanded'), 'true');
 
+    const hostToggles = [];
+    await render(h(ConfigProvider, { prefixCls: 'host' }, h(ui.ThinkContent, {
+      key: 'host', content: 'host thought', onExpandedChange: (value) => hostToggles.push(value),
+    })));
+    const style = document.createElement('style');
+    style.textContent = kitCss;
+    document.head.append(style);
+    const hostHeader = container.querySelector('.host-collapse-header');
+    assert.equal(window.getComputedStyle(hostHeader).padding, '2px');
+    const headerText = container.querySelector('.host-collapse-header-text');
+    assert.notEqual(window.getComputedStyle(headerText).padding, '2px');
+    await click(hostHeader);
+    assert.deepEqual(hostToggles, [true]);
+    assert.equal(hostHeader.getAttribute('aria-expanded'), 'true');
+
     const selected = [];
     await render(h(ui.SuggestedQuestions, { questions: ['ask'], onSelect: (value) => selected.push(value) }));
     await click(container.querySelector('button'));
@@ -249,6 +390,35 @@ test('controlled expansion and callbacks work without a Provider', async () => {
     await render(h(ui.SubAgentListItem, { subagent: agent, onSelect: (value) => selected.push(value) }));
     await click(container.querySelector('button'));
     assert.equal(selected.at(-1), agent);
+
+    const executionTargets = [];
+    await render(h(ui.OpcAnswer, {
+      timeline: opcTimeline, onOpenExecution: (target) => executionTargets.push(target),
+    }));
+    const description = container.querySelector('summary');
+    assert.equal(document.getElementById(description.getAttribute('aria-describedby')).textContent, '核对记录');
+    for (const button of container.querySelectorAll('button[data-status]')) await click(button);
+    assert.deepEqual(executionTargets, [{ kind: 'assignment', id: 'research' }, { kind: 'reply', id: 'research' }]);
+
+    const panelProps = {
+      members: [{ id: 'expert', name: '专家' }],
+      memberId: 'expert',
+      tasks: [{ id: 'first', prompt: '查阅资料' }, { id: 'second', prompt: '核对资料' }],
+      onMemberChange() {},
+      onTaskChange: (id) => selected.push(id),
+    };
+    const panel = (taskId) => h(ui.OpcExpertPanel, { ...panelProps, taskId }, '执行详情');
+    await render(panel('first'));
+    const taskPicker = container.querySelector('input[aria-label="选择任务"]');
+    await act(async () => taskPicker.dispatchEvent(new window.MouseEvent('mousedown', { bubbles: true })));
+    assert.equal(taskPicker.getAttribute('aria-expanded'), 'true');
+    assert.ok(document.querySelector('[role="option"][aria-label="任务 02，核对资料"]'));
+    await click(document.querySelector('.ant-select-item-option[title="核对资料"]'));
+    assert.equal(selected.at(-1), 'second');
+    const taskSelection = taskPicker.closest('.ant-select');
+    assert.match(taskSelection.textContent, /查阅资料/);
+    await render(panel('second'));
+    assert.match(taskSelection.textContent, /核对资料/);
 
     await render(h(ui.MessageActions, { actions: [{ key: 'feedback', label: '反馈', onClick: () => selected.push('feedback') }] }));
     await click(container.querySelector('button'));

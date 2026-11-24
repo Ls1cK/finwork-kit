@@ -107,7 +107,7 @@ export const SystemMessage = memo(function SystemMessage({ children, className, 
 });
 
 export interface MessageItemProps extends MessageAppearanceProps {
-  role: 'user' | 'assistant' | 'system';
+  role: 'user' | 'assistant' | 'opc_assistant' | 'system';
   children?: ReactNode;
   header?: ReactNode;
   footer?: ReactNode;

@@ -1,12 +1,12 @@
 # 开发与验证
 
-当前交付包含工程护栏和从 FinPlus 抽离的消息、Markdown、流式展示及代码高亮组件。UI 使用显式 props、回调和渲染插槽，FinPlus 的 store、服务、业务反馈弹窗与路由由消费方适配。MessageItem 已加入配置控制的双路接入，浏览器视觉验证待执行。`testCoreSse`、`testCoreDetail` 仍是占位能力。
+当前交付包含工程护栏、普通对话与 OPC 的流式归并和历史回放 SDK，以及从 FinPlus 抽离的消息、Markdown、流式展示及代码高亮组件。UI 使用显式 props、回调和渲染插槽，FinPlus 的 store、服务、业务反馈弹窗与路由由消费方适配。库按共享 Antd peer、作用域 CSS 与主题变量维护。
 
 ## 目录与依赖边界
 
 | 位置 | 职责 | 约束 |
 | --- | --- | --- |
-| `src/chat/core-sse`、`src/chat/core-detail` | 未来的流式/历史数据内核 | 不引用 React、UI、样式、DOM、应用 store 或服务 |
+| `src/chat/core-sse`、`src/chat/core-detail` | 帧解码、单轮归并和历史回放 | 不引用 React、UI、样式、DOM、应用 store 或服务 |
 | `src/chat/ui` | 展示组件 | 使用显式 props/回调；CSS Modules + Less，输出编译后的 CSS |
 | `docs/` | 文档、未来真实接入案例和站点资源 | 通过公开包路径引用源码；库不能反向引用 docs |
 | `tests/` | 工程护栏的正反例 | 使用临时合成工程；不复制业务数据，不进入 npm 包 |
@@ -17,6 +17,36 @@
 两个 core 入口另以 ES2020、无 DOM、无环境 types 的编译环境检查其传递依赖，因此共享 helper 中的浏览器全局和 UI 引用也会被检查。这个检查有意比普通 UI 类型检查严格。新增其他领域的纯 core 入口时，必须同步登记 `scripts/check-boundaries.mjs` 的 core roots 并补反例测试。
 
 源码护栏和实际产物检查需要同时保留：前者防止架构越界，后者证明导出、声明、CSS 和包解析可用。
+
+## SDK 实施与验收
+
+| 工作项 | 代码归属 | 验收方式 |
+| --- | --- | --- |
+| 帧解码与普通对话 | `src/chat/core-sse` | 比较单批与分批归并结果，覆盖累计文本、无块 ID 增量、历史兼容、子智能体与输入关闭。 |
+| 实时批次 | `reduceStreamBatch` | 核对任务与回答 ID、跨任务浏览器动作顺序，以及自然关闭、取消和失败时的尾帧策略。 |
+| 公共事件 | `src/chat/core-sse/answer.ts` | 普通和 OPC 共用浏览器、用量、引用和用户追问，核对实时与历史状态。 |
+| OPC 单轮归并 | `src/chat/core-sse/opc.ts` | 对照多专家交错、同一专家多次派发、迟到回传和不同运行隔离，核对与 FinPlus Mock 的时间线、派发和回复。 |
+| 历史解析与回放 | `src/chat/core-detail` | 验证相同事件的历史投影，覆盖空记录、异常帧诊断、文件分类和用户回答关联。 |
+| 独立消费验证 | `scripts/verify-exports.mjs`、`scripts/verify-consumer.mjs` | 构建后检查公开入口、无 DOM 的 NodeNext 声明及 tarball／目录 symlink 消费。另验证文档站单独构建。 |
+
+实时流和历史记录使用同一归并器。归并器接收单轮旧快照并返回新快照和动作意图。请求鉴权、事件攒批、重试、存储和意图执行属于宿主。OPC 无时区的时间戳采用统一 UTC 基准计算同一回复内的相对耗时，显示时间由宿主格式化。公开接口与自定义示例见 [SDK 指南](docs/sdk/overview.md)。
+
+## OPC 协作对话设计
+
+普通对话与 OPC 共用 `chat/ui` 和 `chat/style.css`。OPC 组件实现位于 `src/chat/ui/opc/`，样式使用现有 CSS 变量。普通消息、过程、结论、文件与操作栏沿用现有组件和渲染插槽。
+
+| FinPlus 已有实现 | Kit 可复用能力 | 宿主适配 |
+| --- | --- | --- |
+| `ChatPanel/OpcAnwser` 的头像和状态 | `OpcAvatar`、`OpcStatus` | 提供头像、状态、文案和可选的执行详情回调 |
+| OPC 回答 | `OpcAnswer` 组合时间线、公共追问、异常提示和页脚。`OpcTimeline` 可单独展示事件 | 将有序事件映射为 `OpcTimelineEntry[]`，传入共享消息的 `contentList`，关联派发与回复 |
+| `WorkspaceDrawer/OpcExpertSpace` | `OpcExpertPanel` 渲染专家选择、任务菜单、任务状态、空态与内容区域 | 提供当前专家对应的任务，维护轮次、专家、任务选择，透传关闭按钮和滚动 refs |
+| `ExecutionProcessCollapse`、`ChatAnswerFooter` | `TaskCompletedSplit`、`MessageContentList`、`OutputFilesCollapse`、`ChatCompletedResult`、`SuggestedQuestions` | 格式化耗时，维护每个任务的折叠状态、输出文件和推荐追问，配置预览、下载、反馈等业务动作 |
+
+宿主从同一个归并后的对话状态生成时间线和专家区 props。时间线回调返回 `{ kind, id }`，区分派发记录与独立回复。FinPlus 补齐 `taskId`、`answerId`、`runId` 后定位执行记录。专家面板的 `taskId` 指当前执行项，可使用 `${kind}:${id}`。切换专家后由宿主决定默认任务。过程内容可按任务标识设置 React key，折叠状态可按任务保存。
+
+FinPlus 的普通回答和 OPC 回答共用 `Message` 与 `TaskDetail.messages`。普通正文读 `contentList`。`opc_assistant` 正文读 `opcTimeline`，其中的有序事件供时间线展示，派发与回复索引供抽屉定位尚无回传事件的任务及归档后的同一次执行。异常、上传和产出文件、反馈、推荐追问沿用公共消息字段，执行用量和完成结果沿用 `contentList`。
+
+实时流和历史使用同一套展示结构。Kit 由宿主按消息角色组合 `MessageItem → OpcAnswer → OpcTimeline`，并复用共享的回答页脚。`OpcRound` 继续提供整轮布局。当前流式团长块传 `isStreaming`，执行过程的活动内容 ID 交给 `MessageContentList`。分页滚动、抽屉和分享路由由宿主负责。Kit OPC 示例见[组件文档](docs/reference/opc.md)。
 
 ## 日常验证
 
@@ -45,9 +75,9 @@ pnpm docs:build
 `pnpm build:lib` 后运行 `pnpm verify:consumer`。脚本执行以下步骤：
 
 1. 在临时目录生成真实 npm tarball，检查只包含 dist、package.json 及 README/许可等允许元信息；跳过重复 prepack。
-2. 临时消费者声明 React 18 和类型，用 npm 安装该 tarball，不执行生命周期脚本；优先使用缓存，缺失时访问配置的 registry。断言 Kit 的普通依赖自动安装，检查纯 core 的 Node 导入和无 DOM 的 NodeNext 声明。
-3. 使用实际安装的依赖检查公开 UI 声明、错误 props 的类型反例、SSR、单一 Kit CSS 导入和 Vite 构建。UI 类型使用与 Vite 对应的 Bundler 解析。
-4. 将 tarball 安装结果替换为 kit 目录 symlink，并将临时消费者的 React 运行时与类型链接到同一本地版本，再检查 core、UI 声明、SSR、CSS 和 Vite 构建；Vite 通过 dedupe 统一 React 解析。
+2. 临时消费者声明 React 18、Ant Design v4、图标 peer 和 React 类型，用 npm 安装 tarball，不执行生命周期脚本；优先使用缓存，缺失时访问配置的 registry。断言普通依赖自动安装，检查纯 core 的 Node 导入和无 DOM 的 NodeNext 声明。
+3. 检查公开 UI 声明、错误 props 的类型反例、SSR 与宿主 ConfigProvider 继承。通过 Vite 应用构建确认 Kit CSS 由首屏 HTML 加载，UI 可独立懒加载。UI 类型使用 Bundler 解析。
+4. 将 tarball 替换为 Kit 目录 symlink，将消费者的 peer 运行时与类型链接到同一本地版本，再检查 core、UI 声明、SSR、CSS 和 Vite 构建；Vite dedupe 覆盖 React、React DOM、antd 与图标。
 5. 无论成功或失败，清理本次临时目录，不触碰真实 FinPlus 的 node_modules 或全局 npm link。
 
 临时消费者用于工程测试。文档中的消息组合与内容扩展示例基于已验证的 FinPlus 适配方式，通过公开包路径引用源码。
@@ -67,4 +97,4 @@ pnpm docs:build
 
 下一步先选一个已经稳定的小能力，确认真实输入/输出、对象写入所有权、错误行为和脱敏夹具；核对最新 FinPlus 实现后再设计公共模型。SSE、历史解析和 UI 按各自行为拆任务，共享算法只抽一次。
 
-MessageItem 的 Kit 适配、默认路径、双路开关和相关回归已完成。后续 SSE、历史解析等能力继续分别设计和验证，公共模型随实际需求演进。
+重新接入 UI 前，检查宿主主题映射、首屏 CSS 加载与真实消息场景。后续 SSE、历史解析等能力继续分别设计和验证，公共模型随实际需求演进。

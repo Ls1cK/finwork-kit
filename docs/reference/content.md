@@ -146,12 +146,13 @@ description: 内容分发、正文、思考、工具调用和折叠面板。
 | title | `ReactNode` | 必填 | 折叠标题 |
 | children | `ReactNode` | — | 折叠正文 |
 | ghost | `boolean` | `true` | 透明无边框样式 |
+| destroyInactivePanel | `boolean` | `false` | 折叠后卸载正文 |
 | arrowPlacement | `'start' \| 'end' \| 'inline'` | `'start'` | 箭头置于开头、末尾或标题文字之后 |
 | extra | `ReactNode` | — | 标题附加操作区域 |
 
 ### TaskCompletedSplit
 
-支持共用展开属性及 `ghost`，结论始终显示在过程面板之后。
+支持共用展开属性、`ghost` 和 `destroyInactivePanel`，结论始终显示在过程面板之后。
 
 | 属性 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
