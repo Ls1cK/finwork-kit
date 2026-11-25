@@ -1,3 +1,10 @@
+import {
+  isEscaped,
+  mapNonCodeMarkdown,
+  REFERENCE_ID_CHAR_SOURCE,
+  scanTrailingUnclosedCode,
+} from './referenceAnchors';
+
 /**
  * Detects incomplete markdown syntax at the end of the string and replaces it
  * with custom component placeholders that markdown-to-jsx can render.
@@ -12,36 +19,43 @@ export const preprocessMarkdown = (rawContent: string): string => {
 
   const content = rawContent;
 
-  // 0. Unclosed fenced code block (```)
-  // 打开 ``` 到了但 closing ``` 还没到，
+  // 0. Unclosed fenced code block (``` or ~~~)
+  // 打开围栏到了但 closing 围栏还没到，
   // markdown-to-jsx 会把代码内容当作真实 HTML 解析，
-  // 导致 React 报错和 XSS 风险。检测到未闭合时自动补上 closing ```。
-  const fenceCount = countCodeFences(content);
-  if (fenceCount % 2 !== 0) {
+  // 导致 React 报错和 XSS 风险。检测到未闭合时自动补上对应闭合围栏。
+  const codeState = scanTrailingUnclosedCode(content);
+  if (codeState.unclosedFence) {
     // 末尾可能是一个正在输入的不完整行（如 ``` 的开头 `` 或语言标识正在输入）
-    // 直接在末尾补一个换行 + ``` 即可让 markdown-to-jsx 将内容识别为代码块
-    return content + '\n```';
+    // 直接在末尾补上闭合围栏即可让 markdown-to-jsx 将内容识别为代码块
+    const sep = content.endsWith('\n') ? '' : '\n';
+    return `${content}${sep}${codeState.unclosedFence}`;
   }
 
-  // 1. Incomplete Image: ![alt](url... or ![alt]... or ![...
-  // Regex to detect partial image at the end
-  if (/!\[[^\]]*\]?\([^)]*$/.test(content) || /!\[[^\]]*$/.test(content)) {
+  // 1. Incomplete Code Block (Inline): `code...
+  // 先于图片/链接/HTML 截断检查，避免 `"示例 \`[来源](#ref:literal"` 留下悬空反引号。
+  if (codeState.unclosedInlineIndex >= 0) {
+    return content.slice(0, codeState.unclosedInlineIndex);
+  }
+
+  // 2. Incomplete Image: ![alt](url... or ![alt]... or ![...
+  const incompleteImage = /!\[[^\]]*\]?\([^\r\n)]*$|!\[[^\r\n\]]*$/.exec(content);
+  if (
+    incompleteImage &&
+    incompleteImage.index >= codeState.lastCodeEnd &&
+    !isEscaped(content, incompleteImage.index)
+  ) {
     // Remove the partial syntax
-    return content.replace(/!\[[^\]]*\]?(\([^)]*)?$/, '');
+    return content.slice(0, incompleteImage.index);
   }
 
-  // 2. Incomplete Link: [text](url... or [text]...
-  // Be careful not to match simple text in brackets if it's not meant to be a link,
-  // but in streaming context, [text](... at the end is likely a link.
-  if (/\[[^\]]*\]\([^)]*$/.test(content)) {
-    return content.replace(/\[[^\]]*\]\([^)]*$/, '');
-  }
-
-  // 3. Incomplete Code Block (Inline): `code...
-  // Check for odd number of backticks?
-  const backtickCount = (content.match(/`/g) || []).length;
-  if (backtickCount % 2 !== 0 && /`[^`]*$/.test(content)) {
-    return content.replace(/`[^`]*$/, '');
+  // 3. Incomplete Link: [text](url... or [text]...
+  const incompleteLink = /\[[^\r\n\]]*\]\([^\r\n)]*$/.exec(content);
+  if (
+    incompleteLink &&
+    incompleteLink.index >= codeState.lastCodeEnd &&
+    !isEscaped(content, incompleteLink.index)
+  ) {
+    return content.slice(0, incompleteLink.index);
   }
 
   // 4. Incomplete Table: Line starts with |
@@ -56,8 +70,9 @@ export const preprocessMarkdown = (rawContent: string): string => {
   // }
 
   // 5. Incomplete HTML: <div... or <span... but not closed
-  if (/<[a-zA-Z][^>]*$/.test(content)) {
-    return content.replace(/<[a-zA-Z][^>]*$/, '');
+  const incompleteHtml = /<[a-zA-Z][^>]*$/.exec(content);
+  if (incompleteHtml && incompleteHtml.index >= codeState.lastCodeEnd) {
+    return content.slice(0, incompleteHtml.index);
   }
 
   return content;
@@ -76,18 +91,40 @@ export const preprocessStreamingExtra = (rawContent: string): string => {
 
   // 2a. Incomplete REFERENCE Anchor: [来源](#ref:news_search ... 未闭合
   // 流式对话中引用锚点逐步累积，残句若落入通用 Incomplete Link 规则会被整体删除，
-  // 造成下一帧补全后又出现 → 闪烁。这里对末尾引用残句自动补 )，稳定渲染为 <a href="#ref:...">。
-  // 完整锚点（含收尾 )）由渲染层（ReferenceAnchor / a override）进一步替换为 [idx]。
-  if (/\[来源\]\(#[^)]*$/.test(content)) {
-    return content + ')';
+  // 造成下一帧补全后又出现 → 闪烁。仅当末尾处于非代码正文时自动补 )，避免改动未闭合代码块或行内代码字面量。
+  const codeState = scanTrailingUnclosedCode(content);
+  if (!codeState.unclosedFence && codeState.unclosedInlineIndex < 0) {
+    const trailingRef = new RegExp(`\\[来源\\]\\(#${REFERENCE_ID_CHAR_SOURCE}*$`).exec(content);
+    if (
+      trailingRef &&
+      trailingRef.index >= codeState.lastCodeEnd &&
+      !isEscaped(content, trailingRef.index)
+    ) {
+      content = `${content})`;
+    }
   }
 
-  // 6. 保护 **mcp__{server}__{tool}**，防止内部 __ 被解析为强调
-  // 用 (?!\w*__) 否定前瞻确保第二个 __ 之后没有更多 __ 段
-  content = content.replace(/\*\*mcp__\w+__(?!\w*__)\w+\*\*/g, (match) =>
-    match.replace(/__/g, '\\_\\_'),
+  // 2b. 中途出现的未转义残缺引用（如 `[来源](#ref:partial，后续[1](#ref:valid)`），转义其 `[` 阻止 markdown-to-jsx
+  // 的 LINK_R 跨标点或字符把同一行后续有效引用吞进 href；已转义的 `\[来源]` 原样保留以保证幂等。
+  // 6. 同时在非代码片段内保护 **mcp__{server}__{tool}**，防止内部 __ 被解析为强调。
+  // 末尾未闭合行内代码片段原样保留，交由后续 preprocessMarkdown 处理。
+  const brokenRefRe = new RegExp(
+    `\\[来源\\]\\((#ref[:=])(?!${REFERENCE_ID_CHAR_SOURCE}+(?:[)）]|\\][)）]?))`,
+    'g',
   );
-  return content;
+  const transformProse = (prose: string) =>
+    prose
+      .replace(brokenRefRe, (match, prefix: string, offset: number) =>
+        isEscaped(prose, offset) ? match : `\\[来源](${prefix}`,
+      )
+      .replace(/\*\*mcp__\w+__(?!\w*__)\w+\*\*/g, (match) => match.replace(/__/g, '\\_\\_'));
+
+  if (codeState.unclosedInlineIndex >= 0) {
+    const head = mapNonCodeMarkdown(content.slice(0, codeState.unclosedInlineIndex), transformProse);
+    return `${head}${content.slice(codeState.unclosedInlineIndex)}`;
+  }
+
+  return mapNonCodeMarkdown(content, transformProse);
 };
 
 /**
@@ -96,19 +133,3 @@ export const preprocessStreamingExtra = (rawContent: string): string => {
  */
 export const preprocessStreamingMarkdown = (rawContent: string): string =>
   preprocessMarkdown(preprocessStreamingExtra(rawContent));
-
-/**
- * 统计围栏代码块的 fence 数量（行首 ``` 开头的行）。
- * 奇数表示有一个未闭合的代码块。
- */
-function countCodeFences(content: string): number {
-  let count = 0;
-  const lines = content.split('\n');
-  for (const line of lines) {
-    // 围栏代码块的 fence：行首可选空格(0-3) + 至少三个反引号
-    if (/^ {0,3}`{3,}/.test(line)) {
-      count++;
-    }
-  }
-  return count;
-}

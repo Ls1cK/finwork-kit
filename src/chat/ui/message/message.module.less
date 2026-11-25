@@ -97,6 +97,31 @@
   font-size: 12px;
 }
 
+.toolCallRunning {
+  color: @secondary;
+
+  @media (prefers-reduced-motion: reduce) {
+    :global(.anticon-spin) {
+      animation: none;
+    }
+  }
+}
+
+.toolCallFailed > span[role='img']:first-child {
+  color: @warning;
+}
+
+.toolCallDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+
+  > .collapse {
+    margin-bottom: 0;
+  }
+}
+
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .contextCompress:global(:is([class$="-divider"], [class*="-divider "])) { margin: 48px 0 64px; color: @tertiary; font-size: 15px; font-weight: 400; }
 .success { color: @success; }

@@ -1,10 +1,10 @@
 import {
   createRound, decodeFrame, reduceRound,
   type CoreContentBlock, type DecodeFrameOptions, type FrameIssue,
-  type RoundEvent, type RoundKind, type RoundState,
+  type RoundEvent, type RoundKind, type RoundState, type WireFrame,
 } from '../core-sse/index.js';
 import { asRecord, readId, readString } from '../core-sse/protocol.js';
-import { parseDetailFrames, type DetailFrame, type DetailFrameIssue } from './parse.js';
+import { parseDetailFrames, scanDetailFrames, type DetailFrameIssue } from './parse.js';
 
 export { parseDetailFrames } from './parse.js';
 export type { DetailFrame, DetailFrameIssue, DetailParseResult } from './parse.js';
@@ -73,10 +73,27 @@ export interface ReplayedTaskRecords<T extends CoreContentBlock = never, TFile e
   readonly issues: readonly TaskHistoryIssue[];
 }
 
-function isOpcReplyStart({ data }: DetailFrame): boolean {
+const REPLAY_BATCH_SIZE = 512;
+
+function isOpcReplyStartData(data: Record<string, unknown>): boolean {
   if (data.type !== 'OPC_AGENT_REPLY_START' || !readId(data.reply_id)) return false;
   const opc = asRecord(data.opc);
   return Boolean(readId(opc?.agent_id) && (opc?.agent_role === 'leader' || opc?.agent_role === 'worker'));
+}
+
+function hasOpcReplyStart(answer?: string | null): boolean {
+  if (typeof answer !== 'string' || (!answer.includes('OPC_AGENT_REPLY_START') && !answer.includes('\\u'))) {
+    return false;
+  }
+  return scanDetailFrames(answer, (rawJson) => {
+    if (!rawJson.includes('OPC_AGENT_REPLY_START') && !rawJson.includes('\\u')) return false;
+    try {
+      const data = asRecord(JSON.parse(rawJson));
+      return Boolean(data && isOpcReplyStartData(data));
+    } catch {
+      return false;
+    }
+  });
 }
 
 function appendUserAnswers<T extends CoreContentBlock>(
@@ -100,26 +117,47 @@ export function replayTaskRecords<T extends CoreContentBlock = never, TFile exte
   records: readonly TaskHistoryRecord<TFile>[],
   options: ReplayTaskRecordsOptions<T> = {},
 ): ReplayedTaskRecords<T, TFile> {
-  const parsed = options.kind === undefined ? records.map((record) => parseDetailFrames(record.answer)) : undefined;
-  const kind = options.kind ?? (parsed?.some(({ frames }) => frames.some(isOpcReplyStart)) ? 'opc' : 'ordinary');
+  const kind = options.kind ?? (records.some((record) => hasOpcReplyStart(record.answer)) ? 'opc' : 'ordinary');
   const issues: TaskHistoryIssue[] = [];
   const decodeOptions: DecodeFrameOptions<T> = { source: 'history', mapCustomFrame: options.mapCustomFrame };
 
   const rounds = records.map((record, recordIndex): ReplayedTaskRound<T, TFile> => {
     const { chatId, question, createTime, skillName, skillCode, feedback } = record;
-    const { frames, issues: parseIssues } = parsed?.[recordIndex] ?? parseDetailFrames(record.answer);
-    for (const issue of parseIssues) issues.push({ ...issue, recordIndex, chatId });
-
+    let state = createRound<T>({ roundKey: chatId, kind });
     const events: RoundEvent<T>[] = [];
-    for (const { data, frameIndex, offset } of frames) {
-      const decoded = decodeFrame(data, decodeOptions);
-      if (decoded.ok) events.push(decoded.event);
-      else issues.push({ code: decoded.issue.code, frameIndex, offset, recordIndex, chatId });
-    }
+
+    scanDetailFrames(
+      record.answer,
+      (rawJson, frameIndex, offset) => {
+        let parsedJson: unknown;
+        try {
+          parsedJson = JSON.parse(rawJson);
+        } catch {
+          issues.push({ code: 'invalid_json', frameIndex, offset, recordIndex, chatId });
+          return;
+        }
+        const data = asRecord(parsedJson);
+        if (!data || !Object.prototype.hasOwnProperty.call(data, 'type') || !readId(data.type)) {
+          issues.push({ code: 'invalid_frame', frameIndex, offset, recordIndex, chatId });
+          return;
+        }
+        const decoded = decodeFrame(data as WireFrame, decodeOptions);
+        if (decoded.ok) {
+          events.push(decoded.event);
+          if (events.length >= REPLAY_BATCH_SIZE) {
+            state = reduceRound(state, events).state;
+            events.length = 0;
+          }
+        } else {
+          issues.push({ code: decoded.issue.code, frameIndex, offset, recordIndex, chatId });
+        }
+      },
+      (issue) => issues.push({ ...issue, recordIndex, chatId }),
+    );
     appendUserAnswers(record, events);
     events.push({ kind: 'input.end', reason: 'closed' });
+    state = reduceRound(state, events).state;
 
-    const { state } = reduceRound(createRound<T>({ roundKey: chatId, kind }), events);
     const files = record.files ?? [];
     return {
       chatId,

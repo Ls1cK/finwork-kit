@@ -35,7 +35,9 @@ description: 内容分发、正文、思考、工具调用和折叠面板。
 | type | `string` | 是 | 内容类型，也用于匹配 renderers |
 | msg_content_id | `string` | 否 | 消息内容标识，流式匹配与结论拆分时优先于 id |
 | content | `string` | 否 | 回答或思考正文 |
-| output | `string` | 否 | 工具执行结果 |
+| input | `unknown` | 否 | 工具调用参数，传入时在 `TOOL_CALL` 下默认展开展示 |
+| output | `unknown` | 否 | 工具执行结果，`TOOL_CALL` 下默认收起展示，`TOOL_RESPONSE` 支持字符串结果 |
+| state | `string` | 否 | 工具调用状态，非流式且非 `'success'` 时标记异常状态 |
 | tool_call_name / tool_result_name | `string` | 否 | 工具调用名称 / 结果名称 |
 | contextCompressStatus | `'unfinished' \| 'success' \| 'failed'` | 否 | 上下文压缩状态 |
 | question | `string` | 否 | 提问内容 |
@@ -56,17 +58,20 @@ description: 内容分发、正文、思考、工具调用和折叠面板。
 | renderContent | `(content: string, isStreaming: boolean) => ReactNode` | — | 接管回答正文 |
 | renderMarkdown | `MessageTextRenderer` | — | 兼容属性，renderContent 优先 |
 | renderText | `MessageTextRenderer` | — | 接管思考正文 |
+| refAnchors | `MessageReferenceAnchor[]` | — | 当前条目的引用编号，`MessageContentList` 会自动按整轮计算并传入 |
+| renderReference | `(anchor: MessageReferenceAnchor) => ReactNode` | — | 接管引用标记渲染（通常组合 `ReferenceAnchor`） |
+| onCopy | `(text: string) => void \| Promise<void>` | — | 接管代码块及工具参数/输出的复制动作 |
 | contentExpandedMap | `Readonly<Record<string, boolean>>` | — | 各内容项的展开状态 |
-| onContentExpandedChange | `(key: string, expanded: boolean) => void` | — | 内容展开变化，key 由 getContentCollapseKey 生成 |
+| onContentExpandedChange | `(key: string, expanded: boolean) => void` | — | 内容展开变化，key 由 getContentCollapseKey 生成（工具参数/输出为 `${key}_input`、`${key}_output`） |
 | onSubAgentSelect | `(subagent: SubAgent, item: T) => void` | — | 子智能体选择回调 |
 
 `MessageTextRenderer` 为 `(content: string, isStreaming: boolean) => ReactNode`。`MessageContentRenderers<T>` 为按类型名索引的可选渲染函数集合，每个函数接收 `MessageContentItemRenderProps<T>`，即上表中除 `renderers`、`renderUnknown` 外的属性。
 
-默认支持 `THINK_MSG`、`ASSISTANT_MSG`、`TOOL_CALL`、`TOOL_RESPONSE`、`SUBAGENTS`、`CONTEXT_COMPRESS` 和 `ASK_USER_QUESTION`。`TOOL_RESPONSE` 默认仅展示 `tool_result_name === 'Bash'` 的结果，其他工具可通过 renderers 定制。
+默认支持 `THINK_MSG`、`ASSISTANT_MSG`、`TOOL_CALL`、`TOOL_RESPONSE`、`SUBAGENTS`、`CONTEXT_COMPRESS` 和 `ASK_USER_QUESTION`。`TOOL_CALL` 存在 `input` / `output` 时复用 `MarkdownCodeBlock` 展示详情；`TOOL_RESPONSE` 默认仅展示 `tool_result_name === 'Bash'` 的字符串结果，其他工具可通过 renderers 定制。
 
 ### MessageContentList
 
-继承 `MessageContentItem` 的渲染和展开属性，但不接收 `item`、`isStreaming`、`isAnswerStreaming`、`isLatestContextCompress`，这四项由列表计算。
+继承 `MessageContentItem` 的渲染和展开属性，但不接收 `item`、`isStreaming`、`isAnswerStreaming`、`isLatestContextCompress`、`refAnchors`，这五项由列表计算。
 
 | 属性 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
@@ -106,9 +111,10 @@ description: 内容分发、正文、思考、工具调用和折叠面板。
 | --- | --- | --- | --- |
 | label | `ReactNode` | 必填 | 工具名称或状态文案 |
 | detail | `ReactNode` | — | 补充摘要 |
+| status | `string` | — | 工具状态，非流式且非 `'success'` 时显示异常图标 |
 | isStreaming | `boolean` | `false` | 显示执行中状态 |
 | icon | `ReactNode` | 按流式状态生成 | 自定义状态图标 |
-| children | `ReactNode` | — | 状态卡片后的内容 |
+| children | `ReactNode` | — | 状态卡片后的内容（如参数与输出代码块） |
 
 ### ToolCallResponse
 

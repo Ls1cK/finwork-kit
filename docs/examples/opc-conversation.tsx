@@ -75,7 +75,21 @@ export default function OpcConversation() {
             key={selected.id}
             title="执行过程"
             destroyInactivePanel
-            process={<MessageContentList list={[{ id: selected.id, type: 'THINK_MSG', content: selected.prompt }]} />}
+            process={(
+              <MessageContentList
+                list={[
+                  { id: `${selected.id}-think`, type: 'THINK_MSG', content: selected.prompt },
+                  {
+                    id: `${selected.id}-tool`,
+                    type: 'TOOL_CALL',
+                    tool_call_name: 'WRITE_TEXT_FILE',
+                    state: 'success',
+                    input: { file_path: `/workspace/${selected.memberId}/output.md` },
+                    output: `已写入 /workspace/${selected.memberId}/output.md`,
+                  },
+                ]}
+              />
+            )}
             conclusion={selected.conclusion ? (
               <section>
                 <h3>结论</h3>

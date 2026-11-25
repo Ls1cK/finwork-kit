@@ -109,3 +109,26 @@ test('OPC closes an interrupted input without creating a worker report', () => {
   assert.equal(stopped.completion, undefined);
   assert.equal(apply(stopped, frame('TASK_COMPLETED', { status: 'success' })), stopped);
 });
+
+test('OPC applies the last valid completion frame, ignores invalid ones, and preserves state on identical repeats', () => {
+  const uncompleted = frame('TASK_COMPLETED', { status: 'uncompleted', message: 'waiting' });
+  const success = frame('TASK_COMPLETED', { status: 'success', duration_seconds: 3 });
+  const first = apply(createOpc(), uncompleted);
+  assert.equal(first.status, 'uncompleted');
+  assert.equal(first.completion?.message, 'waiting');
+
+  const second = apply(first, success);
+  assert.equal(second.status, 'success');
+  assert.equal(second.completion?.status, 'success');
+  assert.equal(second.completion?.durationSeconds, 3);
+  assert.equal(apply(second, success), second);
+
+  const invalid = { kind: 'frame', source: 'stream', frame: { type: 'TASK_COMPLETED', status: 'bogus' } };
+  assert.equal(reduceRound(second, [invalid]).state, second);
+
+  const reversed = apply(second, uncompleted);
+  assert.equal(reversed.status, 'uncompleted');
+
+  const withReply = apply(first, member('OPC_AGENT_REPLY_START', 'worker-late', 'worker'));
+  assert.ok(withReply.replies['worker-late']);
+});

@@ -224,3 +224,58 @@ test('OPC handles shared metadata and question answers alongside the timeline in
   assert.equal(ended.browserClosed, true);
   assert.deepEqual(ended.timeline.map(({ kind }) => kind), ['leader']);
 });
+
+test('auto kind detection avoids false positives on literal text, detects late OPC rounds, and matches explicit kind across batched chunks', () => {
+  const literalOnly = [
+    {
+      chatId: 'literal',
+      question: 'Q1',
+      answer: answer([
+        { type: 'ASSISTANT_MSG', content: 'Mention OPC_AGENT_REPLY_START in prose' },
+        { type: 'OPC_AGENT_REPLY_START', reply_id: 'missing-opc' },
+        { type: 'TASK_COMPLETED', status: 'success' },
+      ]),
+    },
+  ];
+  const literalReplay = replayTaskRecords(literalOnly);
+  assert.equal(literalReplay.kind, 'ordinary');
+  assert.deepEqual(literalReplay, replayTaskRecords(literalOnly, { kind: 'ordinary' }));
+
+  const largeOrdinaryFrames = Array.from({ length: 600 }, (_, i) => ({
+    type: 'ASSISTANT_MSG',
+    id: 'chunked',
+    text_delta: i === 0 ? 'start' : 'x',
+  }));
+  const largeOrdinary = [{
+    chatId: 'large-ordinary',
+    question: 'Q',
+    answer: answer([...largeOrdinaryFrames, { type: 'TASK_COMPLETED', status: 'success' }]),
+  }];
+  const largeReplayed = replayTaskRecords(largeOrdinary);
+  assert.equal(largeReplayed.kind, 'ordinary');
+  assert.equal(largeReplayed.rounds[0].state.contentList[0].content.length, 5 + 599);
+
+  const multiOpc = [
+    { chatId: 'first', question: 'Q1', answer: answer([{ type: 'STATUS', status: 'started' }]) },
+    {
+      chatId: 'second',
+      question: 'Q2',
+      answer: answer([
+        { type: 'OPC_AGENT_REPLY_START', reply_id: 'leader', opc: { agent_id: 'leader', agent_role: 'leader' } },
+        ...Array.from({ length: 520 }, (_, i) => ({
+          type: 'ASSISTANT_MSG',
+          reply_id: 'leader',
+          opc: { agent_id: 'leader', agent_role: 'leader' },
+          id: 'body',
+          text_delta: i === 0 ? 'begin' : '.',
+        })),
+        { type: 'TASK_COMPLETED', status: 'success' },
+      ]),
+    },
+  ];
+  const autoOpc = replayTaskRecords(multiOpc);
+  const explicitOpc = replayTaskRecords(multiOpc, { kind: 'opc' });
+  assert.equal(autoOpc.kind, 'opc');
+  assert.deepEqual(autoOpc, explicitOpc);
+  assert.equal(autoOpc.rounds[1].state.replies.leader.blocks[0].content.length, 5 + 519);
+});

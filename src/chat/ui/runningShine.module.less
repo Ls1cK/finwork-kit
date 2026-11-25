@@ -1,5 +1,27 @@
 @import './tokens.less';
 
+@think-cycle-duration: 2.5s;
+
+.thinkHeading {
+  display: inline-block;
+  height: 1lh;
+  vertical-align: top;
+}
+
+.thinkShine,
+.thinkDots {
+  color: @secondary;
+}
+
+.thinkShine {
+  display: inline-block;
+  height: 100%;
+}
+
+.thinkDots {
+  display: inline-block;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .runningShine {
     position: relative;
@@ -15,6 +37,62 @@
       pointer-events: none;
       content: '';
     }
+  }
+
+  .thinkDots {
+    animation: thinkDotsCycle @think-cycle-duration steps(1) infinite;
+  }
+
+  @supports (background-clip: text) and (color: color-mix(in srgb, #000 50%, transparent)) {
+    .thinkShine {
+      background: linear-gradient(
+          90deg,
+          @secondary 29%,
+          color-mix(in srgb, @info 76%, #000) 50%,
+          @secondary 71%
+        )
+        right center / 360% 100% no-repeat;
+      background-clip: text;
+      color: transparent;
+      animation: thinkShineSweep @think-cycle-duration linear infinite;
+    }
+  }
+}
+
+@media (forced-colors: active) {
+  .thinkShine {
+    background: none;
+    color: CanvasText;
+    animation: none;
+  }
+}
+
+@keyframes thinkDotsCycle {
+  from {
+    clip-path: inset(0 66.6667% 0 0);
+  }
+
+  33.3333% {
+    clip-path: inset(0 33.3333% 0 0);
+  }
+
+  66.6667%,
+  to {
+    clip-path: inset(0);
+  }
+}
+
+@keyframes thinkShineSweep {
+  from {
+    background-position: right center;
+  }
+
+  66.6667% {
+    background-position: center;
+  }
+
+  to {
+    background-position: left center;
   }
 }
 

@@ -17,6 +17,7 @@ export interface StreamingMarkdownRendererProps {
 
 const STRONG_MARKDOWN_RE =
   /(```|^\s*#{1,6}\s|\*\*[^*]+\*\*|^\s*[-*+]\s|^\s*\d+\.\s|\[.*\]\(.*\)|^\s*>\s)/m;
+const REF_HREF_PREFIXES = ['#ref:', '#ref='] as const;
 
 export const StreamingMarkdownRenderer = memo(function StreamingMarkdownRenderer({
   content, isStreaming = false, refAnchors, renderReference, onCopy, overrides,
@@ -30,8 +31,14 @@ export const StreamingMarkdownRenderer = memo(function StreamingMarkdownRenderer
   const mergedOverrides = useMemo<MarkdownToJSX.Options['overrides']>(() => ({
     ...(renderReference ? {
       a: ({ href, children }: { href?: string; children?: ReactNode }) => {
-        if (href?.startsWith('#ref:') && !Number.isNaN(Number(children))) {
-          return renderReference({ referenceId: href.slice(5), idx: Number(children) });
+        const matchedPrefix = REF_HREF_PREFIXES.find((prefix) => href?.startsWith(prefix));
+        if (matchedPrefix && href) {
+          const referenceId = href.slice(matchedPrefix.length);
+          const text = (Array.isArray(children) ? children.join('') : String(children ?? '')).trim();
+          const idx = text ? Number(text) : Number.NaN;
+          if (referenceId && Number.isFinite(idx)) {
+            return renderReference({ referenceId, idx });
+          }
         }
         const safeHref = href?.trim().toLowerCase().startsWith('javascript:') ? '#' : href;
         const anchor = safeHref?.startsWith('#');
@@ -50,7 +57,7 @@ export const StreamingMarkdownRenderer = memo(function StreamingMarkdownRenderer
   }
   return (
     <MarkdownViewer
-      content={displayContent} showImage={false}
+      content={displayContent} showImage={false} skipFrontMatter
       extraPreprocess={preprocessStreamingExtra} overrides={mergedOverrides} onCopy={onCopy}
     />
   );

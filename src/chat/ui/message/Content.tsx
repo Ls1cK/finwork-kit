@@ -42,9 +42,12 @@ export interface ThinkContentProps extends MessageAppearanceProps {
 export const ThinkContent = memo(function ThinkContent({
   content, isStreaming = false, title, renderContent, ...collapseProps
 }: ThinkContentProps) {
-  const heading = title ?? (isStreaming
-    ? <span className={motionStyles.runningShine} style={{ display: 'inline-block', verticalAlign: 'top' }}>正在思考中...</span>
-    : '已完成思考');
+  const heading = title ?? (isStreaming ? (
+    <span className={motionStyles.thinkHeading}>
+      <span className={motionStyles.thinkShine}>正在思考中</span>
+      <span className={motionStyles.thinkDots} aria-hidden="true">...</span>
+    </span>
+  ) : '已完成思考');
   return (
     <MessageCollapse {...collapseProps} className={`${styles.thinkCollapse} ${collapseProps.className ?? ''}`} arrowPlacement="inline" title={heading}>
       <div className={`${styles.thinkContent} ${renderContent ? '' : styles.plainText}`} aria-busy={isStreaming}>
@@ -57,23 +60,41 @@ export const ThinkContent = memo(function ThinkContent({
 export interface ToolCallMsgProps extends MessageAppearanceProps {
   label: ReactNode;
   detail?: ReactNode;
+  status?: string;
   isStreaming?: boolean;
   icon?: ReactNode;
   children?: ReactNode;
 }
 
 export const ToolCallMsg = memo(function ToolCallMsg({
-  label, detail, isStreaming = false, icon, children, className, style,
+  label, detail, status, isStreaming = false, icon, children, className, style,
 }: ToolCallMsgProps) {
-  const cardClassName = isStreaming ? `${styles.toolCallCard} ${motionStyles.runningShine}` : styles.toolCallCard;
+  const normalizedStatus = status?.trim();
+  const isFailed = !isStreaming && Boolean(normalizedStatus && normalizedStatus !== 'success');
+  const cardClassName = [
+    styles.toolCallCard,
+    isStreaming ? `${styles.toolCallRunning} ${motionStyles.runningShine}` : '',
+    isFailed ? styles.toolCallFailed : '',
+  ].filter(Boolean).join(' ');
+  const resolvedIcon = icon ?? (
+    isStreaming ? <HourglassOutlined spin />
+      : isFailed ? <ExclamationCircleOutlined />
+        : <CheckCircleOutlined />
+  );
   return (
     <div className={`${styles.toolCall} ${className ?? ''}`} style={style}>
-      <div className={cardClassName} aria-busy={isStreaming}>
-        {icon ?? (isStreaming ? <HourglassOutlined /> : <CheckCircleOutlined />)}
+      <div
+        className={cardClassName}
+        data-status={isStreaming ? 'running' : normalizedStatus || undefined}
+        aria-busy={isStreaming}
+      >
+        {resolvedIcon}
         <span>{label}</span>
         {detail && <span className={styles.truncate}>{detail}</span>}
       </div>
-      {children}
+      {children != null && children !== false && (
+        <div className={styles.toolCallDetails}>{children}</div>
+      )}
     </div>
   );
 });

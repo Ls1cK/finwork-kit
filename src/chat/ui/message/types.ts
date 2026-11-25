@@ -30,7 +30,9 @@ export interface MessageContent {
   type: string;
   msg_content_id?: string;
   content?: string;
-  output?: string;
+  input?: unknown;
+  output?: unknown;
+  state?: string;
   tool_call_name?: string;
   tool_result_name?: string;
   contextCompressStatus?: 'unfinished' | 'success' | 'failed';

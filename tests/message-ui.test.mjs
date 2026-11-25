@@ -142,8 +142,17 @@ test('OPC preserves timeline order and supports reading without execution action
 
 test('only active thinking, tool calls and OPC statuses use the reduced-motion-aware shine', () => {
   assert.match(kitCss, /@media\s*\(prefers-reduced-motion:\s*no-preference\)[\s\S]*runningShine/);
+  assert.match(kitCss, /@supports\s*\(background-clip:\s*text\)\s*and\s*\(color:\s*color-mix\([^)]+\)\)[\s\S]*thinkShine/);
+  assert.match(kitCss, /thinkDotsCycle/);
+  assert.match(kitCss, /thinkShineSweep/);
+  assert.match(kitCss, /@media\s*\(forced-colors:\s*active\)[\s\S]*CanvasText/);
+  const activeThink = html(ui.ThinkContent, { content: 'think', isStreaming: true });
+  assert.match(activeThink, /thinkShine/);
+  assert.match(activeThink, /thinkDots/);
+  assert.doesNotMatch(activeThink, /runningShine/);
+  const idleThink = html(ui.ThinkContent, { content: 'think' });
+  assert.doesNotMatch(idleThink, /thinkShine|thinkDots|runningShine/);
   for (const [component, base, active] of [
-    [ui.ThinkContent, { content: 'think' }, { isStreaming: true }],
     [ui.ToolCallMsg, { label: 'Read' }, { isStreaming: true }],
     [ui.OpcStatus, { status: 'completed', label: '任务' }, { status: 'running' }],
   ]) {
@@ -520,4 +529,250 @@ test('reference numbering survives lists, tables, duplicates and unknown fields'
   });
   assert.match(result, /<table>/);
   assert.match(result, /data-reference="news:1">3/);
+});
+
+test('chat Markdown renderers preserve leading YAML and --- sections while MarkdownViewer still strips front matter by default', () => {
+  const yamlExample = '---\nhost: localhost\nport: 8080\n---\n\n正文';
+  const singleFieldYaml = '---\nport: 8080\n---\n\n正文';
+  const hrSections = '---\n\n## 第一节\n\n内容\n\n---\n\n### 第二节';
+  const metas = [];
+  const docHtml = html(ui.MarkdownViewer, { content: yamlExample, onMeta: (meta) => metas.push(meta) });
+  assert.doesNotMatch(docHtml, /host: localhost/);
+  assert.deepEqual(metas, [{ host: 'localhost', port: 8080 }]);
+  assert.match(html(ui.MarkdownViewer, { content: yamlExample, skipFrontMatter: true }), /host: localhost[\s\S]*port: 8080[\s\S]*正文/);
+
+  for (const render of [
+    (content) => html(ui.StreamingMarkdownRenderer, { content }),
+    (content) => html(ui.AssistantContent, { content }),
+    (content) => html(ui.OpcRound, { timeline: [{ id: 'l', kind: 'leader', name: '团长', content }] }),
+  ]) {
+    assert.match(render(yamlExample), /host: localhost[\s\S]*port: 8080[\s\S]*正文/);
+    const singleMarkup = render(singleFieldYaml);
+    assert.match(singleMarkup, /port: 8080[\s\S]*正文/);
+    assert.doesNotMatch(singleMarkup, /<h[1-6][^>]*>port: 8080/);
+    assert.match(render(hrSections), /role="separator"[\s\S]*第一节[\s\S]*role="separator"[\s\S]*第二节/);
+  }
+});
+
+test('MessageContentList renders tool details, failed status and reference cards', async () => {
+  const toolList = [
+    {
+      id: 'ok-tool',
+      type: 'TOOL_CALL',
+      sourceId: 'ok-tool',
+      tool_call_name: 'WRITE_TEXT_FILE',
+      state: 'success',
+      input: { file_path: '/workspace/out.md' },
+      output: '已写入 /workspace/out.md',
+    },
+    {
+      id: 'fail-tool',
+      type: 'TOOL_CALL',
+      sourceId: 'fail-tool',
+      tool_call_name: 'READ_FILE',
+      state: 'error',
+      input: 'missing.md',
+    },
+  ];
+  const toolMarkup = html(ui.MessageContentList, { list: toolList });
+  assert.match(toolMarkup, /WRITE_TEXT_FILE/);
+  assert.match(toolMarkup, /参数/);
+  assert.match(toolMarkup, /输出/);
+  assert.match(toolMarkup, /out\.md/);
+  assert.match(toolMarkup, /READ_FILE · error/);
+  assert.match(toolMarkup, /anticon-exclamation-circle/);
+
+  const refList = [
+    { id: 'think', type: 'THINK_MSG', content: '思考 [来源](#ref:skip)' },
+    { id: 'a1', type: 'ASSISTANT_MSG', content: '第一句[来源](#ref=news:1]）和[来源](#ref:news:2])' },
+    { id: 'a2', type: 'ASSISTANT_MSG', content: '结论[来源](#ref:news:3）' },
+  ];
+  assert.deepEqual(
+    ui.extractRefIdsFromText('A [来源](#ref:a:1) B [来源](#ref=a:2]) C [来源](#ref:a:3） D [来源](#ref=a:4]） E [来源](#ref:incomplete'),
+    ['a:1', 'a:2', 'a:3', 'a:4'],
+  );
+  assert.equal(
+    ui.replaceRefAnchorsWithIdx('(A [来源](#ref=a:2])) B [来源](#ref:a:3）', [
+      { referenceId: 'a:2', idx: 1 },
+      { referenceId: 'a:3', idx: 2 },
+    ]),
+    '(A [1](#ref:a:2)) B [2](#ref:a:3)',
+  );
+  const renderReference = ({ referenceId, idx }) => h('button', { 'data-ref-id': referenceId }, `[${idx}]`);
+  for (const extraProps of [{}, { conclusionId: 'a2', processExpanded: true }]) {
+    const refMarkup = html(ui.MessageContentList, { list: refList, renderReference, ...extraProps });
+    assert.match(refMarkup, /data-ref-id="news:1">\[1\]/);
+    assert.match(refMarkup, /data-ref-id="news:2">\[2\]/);
+    assert.match(refMarkup, /data-ref-id="news:3">\[3\]/);
+  }
+
+  const codeSampleContent = [
+    '```md',
+    '[来源](#ref:sample)',
+    '```',
+    '',
+    '> ```md',
+    '> [来源](#ref:quoted)',
+    '> ```',
+    '',
+    '行内示例 `[来源](#ref:inline)` 与 `` `[来源](#ref:inline2)` ``，正文引用[来源](#ref:real)',
+    '',
+    '```md',
+    '[来源](#ref:unclosed-fence)',
+  ].join('\n');
+  assert.deepEqual(ui.extractRefIdsFromText(codeSampleContent), ['real']);
+  for (const withRenderer of [true, false]) {
+    const rendered = html(ui.MessageContentList, {
+      list: [{ id: 'code-ref', type: 'ASSISTANT_MSG', content: codeSampleContent }],
+      ...(withRenderer ? { renderReference } : {}),
+    });
+    assert.match(rendered, /\[来源\]\(#ref:sample\)/);
+    assert.match(rendered, /\[来源\]\(#ref:quoted\)/);
+    assert.match(rendered, /\[来源\]\(#ref:inline\)/);
+    assert.match(rendered, /\[来源\]\(#ref:inline2\)/);
+    assert.match(rendered, /\[来源\]\(#ref:unclosed-fence\)/);
+    if (withRenderer) {
+      assert.match(rendered, /data-ref-id="real">\[1\]/);
+    } else {
+      assert.match(rendered, /href="#ref:real"[^>]*>1<\/a>/);
+    }
+  }
+
+  for (const brokenAndValid of [
+    '[来源](#ref:partial\n\n第二段 [来源](#ref:valid)',
+    '第一句 [来源](#ref:partial 第二句 [来源](#ref:valid)',
+    '第一句[来源](#ref:partial，第二句[来源](#ref:valid)',
+    '第一句[来源](#ref:partial[来源](#ref:valid)',
+  ]) {
+    assert.deepEqual(ui.extractRefIdsFromText(brokenAndValid), ['valid']);
+    const rendered = html(ui.MessageContentList, {
+      list: [{ id: 'broken-ref', type: 'ASSISTANT_MSG', content: brokenAndValid }],
+      renderReference,
+    });
+    assert.match(rendered, /\[来源\]\(#ref:partial/);
+    assert.match(rendered, /data-ref-id="valid">\[1\]/);
+  }
+
+  const escapedBroken = '已转义残缺 \\[来源](#ref:partial，后续正文与 [来源](#ref:valid)';
+  const escapedComplete = '已转义完整 \\[来源](#ref:escaped) 与 [来源](#ref:valid)';
+  assert.deepEqual(ui.extractRefIdsFromText(escapedBroken), ['valid']);
+  assert.deepEqual(ui.extractRefIdsFromText(escapedComplete), ['valid']);
+  assert.equal(ui.preprocessStreamingExtra(escapedBroken), escapedBroken);
+  assert.equal(ui.preprocessStreamingExtra(ui.preprocessStreamingExtra('第一句[来源](#ref:partial，第二句')), '第一句\\[来源](#ref:partial，第二句');
+  const escapedBrokenHtml = html(ui.MessageContentList, {
+    list: [{ id: 'escaped-broken', type: 'ASSISTANT_MSG', content: escapedBroken }],
+    renderReference,
+  });
+  assert.match(escapedBrokenHtml, /\[来源\]\(#ref:partial，后续正文与/);
+  assert.match(escapedBrokenHtml, /data-ref-id="valid">\[1\]/);
+  const escapedCompleteHtml = html(ui.MessageContentList, {
+    list: [{ id: 'escaped-complete', type: 'ASSISTANT_MSG', content: escapedComplete }],
+    renderReference,
+  });
+  assert.match(escapedCompleteHtml, /\[来源\]\(#ref:escaped\) 与/);
+  assert.match(escapedCompleteHtml, /data-ref-id="valid">\[1\]/);
+
+  const multiBacktick = '请使用 `` ` `` 表示反引号，详见报告[来源](#ref:valid)';
+  const escapedBacktick = '转义反引号 \\` 后的正文[来源](#ref:valid)';
+  assert.equal(ui.preprocessMarkdown(multiBacktick), multiBacktick);
+  assert.equal(ui.preprocessStreamingMarkdown(multiBacktick), multiBacktick);
+  assert.equal(ui.preprocessMarkdown(escapedBacktick), escapedBacktick);
+  assert.equal(ui.preprocessMarkdown('已闭合 `` ` `` 后跟未闭合 `partial'), '已闭合 `` ` `` 后跟未闭合 ');
+  for (const sample of [multiBacktick, escapedBacktick]) {
+    const rendered = html(ui.MessageContentList, {
+      list: [{ id: 'inline-ticks', type: 'ASSISTANT_MSG', content: sample }],
+      renderReference,
+    });
+    assert.match(rendered, /data-ref-id="valid">\[1\]/);
+    assert.match(rendered, /详见报告|后的正文/);
+  }
+  assert.match(
+    html(ui.MessageContentList, { list: [{ id: 'multi-code', type: 'ASSISTANT_MSG', content: multiBacktick }], renderReference }),
+    /<code>\s*`\s*<\/code>[\s\S]*表示反引号/,
+  );
+
+  const singlePara64K = '片段 `inline_code` 与 `` `` ` `` `` 文本 '.repeat(1800) + '[来源](#ref:tail)';
+  assert.ok(singlePara64K.length > 60_000);
+  const t0 = performance.now();
+  const extracted64K = ui.extractRefIdsFromText(singlePara64K);
+  const replaced64K = ui.replaceRefAnchorsWithIdx(singlePara64K, [{ referenceId: 'tail', idx: 1 }]);
+  const elapsedMs = performance.now() - t0;
+  assert.deepEqual(extracted64K, ['tail']);
+  assert.ok(replaced64K.endsWith('[1](#ref:tail)'));
+  assert.ok(elapsedMs < 50, `Expected linear scan < 50ms, got ${elapsedMs.toFixed(2)}ms`);
+
+  for (const quoteFenceSample of [
+    '> ```md\n> [来源](#ref:quoted)\n\n正文 [来源](#ref:real)',
+    '> > ```md\n> > [来源](#ref:nested)\n>\n> 外层引用 [来源](#ref:real)',
+    '> ```md\n> [来源](#ref:quoted)\n\n> 新引用块 [来源](#ref:real)',
+    '- 列表项\n\n  > ```md\n  > [来源](#ref:quoted)\n\n正文 [来源](#ref:real)',
+  ]) {
+    assert.deepEqual(ui.extractRefIdsFromText(quoteFenceSample), ['real']);
+    const rendered = html(ui.MessageContentList, {
+      list: [{ id: 'quote-fence', type: 'ASSISTANT_MSG', content: quoteFenceSample }],
+      renderReference,
+    });
+    assert.match(rendered, /\[来源\]\(#ref:(?:quoted|nested)\)/);
+    assert.match(rendered, /data-ref-id="real">\[1\]/);
+    assert.doesNotMatch(rendered, /<pre><code>\s*<\/code><\/pre>\s*<\/div>/);
+  }
+
+  for (const streamingCodeSample of [
+    '```md\n[来源](#ref:literal',
+    '> ```md\n> [来源](#ref:literal',
+    '示例 `[来源](#ref:literal',
+  ]) {
+    assert.equal(ui.preprocessStreamingExtra(streamingCodeSample), streamingCodeSample);
+  }
+  assert.equal(ui.preprocessStreamingMarkdown('```md\n[来源](#ref:literal'), '```md\n[来源](#ref:literal\n```');
+  assert.equal(ui.preprocessStreamingMarkdown('> ```md\n> [来源](#ref:literal'), '> ```md\n> [来源](#ref:literal\n> ```');
+  assert.equal(ui.preprocessStreamingMarkdown('示例 `[来源](#ref:literal'), '示例 ');
+  const literalFenceHtml = html(ui.MessageContentList, {
+    list: [{ id: 'stream-literal', type: 'ASSISTANT_MSG', content: '```md\n[来源](#ref:literal' }],
+    renderReference,
+  });
+  assert.match(literalFenceHtml, /\[来源\]\(#ref:literal/);
+  assert.doesNotMatch(literalFenceHtml, /\[来源\]\(#ref:literal\)/);
+
+  assert.equal(ui.preprocessMarkdown('示例 `[a](b`'), '示例 `[a](b`');
+  assert.equal(ui.preprocessMarkdown('示例 `<div`'), '示例 `<div`');
+  assert.equal(ui.preprocessStreamingExtra('` **mcp__server__tool** `'), '` **mcp__server__tool** `');
+
+  const window = new Window();
+  const globals = {
+    window, document: window.document, navigator: window.navigator,
+    HTMLElement: window.HTMLElement, Element: window.Element, SVGElement: window.SVGElement,
+    Node: window.Node, ShadowRoot: window.ShadowRoot,
+    getComputedStyle: window.getComputedStyle.bind(window),
+    requestAnimationFrame: window.requestAnimationFrame.bind(window),
+    cancelAnimationFrame: window.cancelAnimationFrame.bind(window),
+    IS_REACT_ACT_ENVIRONMENT: true,
+  };
+  const originals = new Map(Object.keys(globals).map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
+  for (const [key, value] of Object.entries(globals)) Object.defineProperty(globalThis, key, { configurable: true, writable: true, value });
+  const container = document.createElement('div');
+  document.body.append(container);
+  const root = createRoot(container);
+  try {
+    const expanded = {};
+    const toggles = [];
+    await act(async () => root.render(h(ui.MessageContentList, {
+      list: [toolList[0]],
+      contentExpandedMap: expanded,
+      onContentExpandedChange: (key, next) => toggles.push([key, next]),
+    })));
+    const headers = [...container.querySelectorAll('.ant-collapse-header')];
+    assert.equal(headers.length, 2);
+    assert.equal(headers[0].getAttribute('aria-expanded'), 'true');
+    assert.equal(headers[1].getAttribute('aria-expanded'), 'false');
+    await act(async () => headers[1].click());
+    assert.deepEqual(toggles, [['ok-tool_TOOL_CALL_output', true]]);
+  } finally {
+    await act(async () => root.unmount());
+    await window.happyDOM.close();
+    for (const [key, descriptor] of originals) {
+      if (descriptor) Object.defineProperty(globalThis, key, descriptor);
+      else delete globalThis[key];
+    }
+  }
 });

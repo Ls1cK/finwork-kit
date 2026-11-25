@@ -12,7 +12,7 @@ const conversationTypes = new Set([
 ]);
 const agentTypes = new Set([
   'OPC_AGENT_REPLY_START', 'OPC_AGENT_REPLY_END', 'OPC_TEAM_SUMMARY', 'OPC_AGENT_LIMIT_REACHED',
-  'SUBAGENT_CREATE', 'SUBAGENT_COMPLETE',
+  'SUBAGENT_CREATE', 'SUBAGENT_CREATE_START', 'SUBAGENT_CREATE_END', 'SUBAGENT_COMPLETE',
 ]);
 
 function isKnownFrame(type: string): boolean {

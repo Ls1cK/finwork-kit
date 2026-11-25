@@ -20,12 +20,15 @@ export interface DetailParseResult {
 
 const openTag = '<data>';
 
-export function parseDetailFrames(answer?: string | null): DetailParseResult {
-  const frames: DetailFrame[] = [];
-  const issues: DetailFrameIssue[] = [];
-  if (answer == null) return { frames, issues };
+export function scanDetailFrames(
+  answer: unknown,
+  onFrame: (rawJson: string, frameIndex: number, offset: number) => boolean | void,
+  onIssue?: (issue: DetailFrameIssue) => void,
+): boolean {
+  if (answer == null) return false;
   if (typeof answer !== 'string') {
-    return { frames, issues: [{ code: 'invalid_frame', frameIndex: 0, offset: 0 }] };
+    onIssue?.({ code: 'invalid_frame', frameIndex: 0, offset: 0 });
+    return false;
   }
 
   const tokens = /<\/?data>|["\\]/gi;
@@ -57,7 +60,7 @@ export function parseDetailFrames(answer?: string | null): DetailParseResult {
       afterString.lastIndex = position + 1;
       if (quoted && recoveryOffset >= 0 && !afterString.test(answer)) {
         // A quote starting a subsequent frame cannot end the broken JSON string.
-        issues.push({ code: 'invalid_json', frameIndex, offset });
+        onIssue?.({ code: 'invalid_json', frameIndex, offset });
         frameIndex += 1;
         offset = recoveryOffset;
       } else {
@@ -74,28 +77,43 @@ export function parseDetailFrames(answer?: string | null): DetailParseResult {
       continue;
     }
     if (opening) {
-      issues.push({ code: 'incomplete_frame', frameIndex, offset });
+      onIssue?.({ code: 'incomplete_frame', frameIndex, offset });
       frameIndex += 1;
       offset = position;
       continue;
     }
 
-    try {
-      const data = asRecord(JSON.parse(answer.slice(offset + openTag.length, position)));
-      if (data && Object.prototype.hasOwnProperty.call(data, 'type') && readId(data.type)) {
-        frames.push({ frameIndex, offset, data: data as WireFrame });
-      } else {
-        issues.push({ code: 'invalid_frame', frameIndex, offset });
-      }
-    } catch {
-      issues.push({ code: 'invalid_json', frameIndex, offset });
+    if (onFrame(answer.slice(offset + openTag.length, position), frameIndex, offset) === true) {
+      return true;
     }
     frameIndex += 1;
     offset = -1;
   }
 
   if (offset >= 0) {
-    issues.push({ code: quotedClose ? 'invalid_json' : 'incomplete_frame', frameIndex, offset });
+    onIssue?.({ code: quotedClose ? 'invalid_json' : 'incomplete_frame', frameIndex, offset });
   }
+  return false;
+}
+
+export function parseDetailFrames(answer?: string | null): DetailParseResult {
+  const frames: DetailFrame[] = [];
+  const issues: DetailFrameIssue[] = [];
+  scanDetailFrames(
+    answer,
+    (rawJson, frameIndex, offset) => {
+      try {
+        const data = asRecord(JSON.parse(rawJson));
+        if (data && Object.prototype.hasOwnProperty.call(data, 'type') && readId(data.type)) {
+          frames.push({ frameIndex, offset, data: data as WireFrame });
+        } else {
+          issues.push({ code: 'invalid_frame', frameIndex, offset });
+        }
+      } catch {
+        issues.push({ code: 'invalid_json', frameIndex, offset });
+      }
+    },
+    (issue) => issues.push(issue),
+  );
   return { frames, issues };
 }

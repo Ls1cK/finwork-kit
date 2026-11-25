@@ -97,7 +97,12 @@ function updateSubAgent<T extends CoreContentBlock>(
   const { frame, source } = event;
   const memberId = readId(frame.id);
   const type = frame.type.slice('SUBAGENT_'.length);
-  if (type === 'USAGE_INFO' || (type === 'COMPLETE' && source === 'history')) return state;
+  if (
+    type === 'USAGE_INFO' ||
+    type === 'CREATE_START' ||
+    type === 'CREATE_END' ||
+    (type === 'COMPLETE' && source === 'history')
+  ) return state;
 
   const groups = state.contentList;
   const creating = type === 'CREATE';

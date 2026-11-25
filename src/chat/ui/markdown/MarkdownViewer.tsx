@@ -87,6 +87,11 @@ export interface MarkdownViewerProps {
    */
   extraPreprocess?: (content: string) => string;
   docMarkdown?: boolean;
+  /**
+   * 是否跳过 YAML front matter 剥离。通用 Markdown 渲染默认剥离；
+   * 对话等以 `---` 开头的正文会被 front matter 正则误吞，需置为 true 跳过。
+   */
+  skipFrontMatter?: boolean;
 }
 
 const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
@@ -98,12 +103,18 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
   showImage = true,
   extraPreprocess,
   docMarkdown = false,
+  skipFrontMatter = false,
 }) => {
   const safeContent = useMemo(() => {
     // 流式专属额外逻辑（引用锚点补全、mcp 保护）先行注入，仅 StreamingMarkdownRenderer 传递；
     // 基础预处理对所有调用方一视同仁（md 文件本身也可能是不规范内容）。
     const pre = extraPreprocess ? extraPreprocess(content) : content;
     const processed = preprocessMarkdown(pre);
+
+    if (skipFrontMatter) {
+      // markdown-to-jsx 内部 compile() 也会无条件剥离以 ^--- 开头的块，前置换行可安全避开该正则且不产生额外节点。
+      return processed.startsWith('---') ? `\n${processed}` : processed;
+    }
 
     // 解析并剥离 YAML front matter，meta 由外部调用方决定如何展示
     const { content: body, meta } = extractFrontMatter(processed);
@@ -112,7 +123,7 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
     }
 
     return body;
-  }, [content, onMeta, extraPreprocess]);
+  }, [content, onMeta, extraPreprocess, skipFrontMatter]);
 
   const mergedOverrides = useMemo<MarkdownToJSX.Options['overrides']>(
     () => ({

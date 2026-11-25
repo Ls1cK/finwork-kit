@@ -1,10 +1,11 @@
-import { Fragment, memo, type ReactNode } from 'react';
+import { Fragment, memo, useMemo, type ReactNode } from 'react';
+import { buildRefAnchorsByContentId } from '../markdown/referenceAnchors';
 import { TaskCompletedSplit } from './Content';
 import { MessageContentItem, type MessageContentItemProps } from './MessageContentItem';
 import { getContentKey, type MessageContent } from './types';
 
 export interface MessageContentListProps<T extends MessageContent = MessageContent> extends Omit<
-  MessageContentItemProps<T>, 'item' | 'isStreaming' | 'isAnswerStreaming' | 'isLatestContextCompress'
+  MessageContentItemProps<T>, 'item' | 'isStreaming' | 'isAnswerStreaming' | 'isLatestContextCompress' | 'refAnchors'
 > {
   list: readonly T[];
   streamingAssistantContentId?: string;
@@ -24,12 +25,14 @@ function MessageContentListInner<T extends MessageContent>({
   conclusionId, processTitle = '执行过程', processExpanded, defaultProcessExpanded,
   onProcessExpandedChange, ...contentProps
 }: MessageContentListProps<T>) {
+  const refAnchorsByContentId = useMemo(() => buildRefAnchorsByContentId(list), [list]);
   const latestCompressIndex = list.map((item) => item.type).lastIndexOf('CONTEXT_COMPRESS');
   const conclusionIndex = conclusionId === undefined ? -1
     : list.findIndex((item) => (item.msg_content_id || item.id) === conclusionId);
   const render = (item: T, index: number) => {
     const props: MessageContentItemProps<T> = {
       ...contentProps, item,
+      refAnchors: refAnchorsByContentId[item.msg_content_id || item.id],
       isStreaming: !!streamingAssistantContentId && streamingAssistantContentId === (item.msg_content_id || item.id),
       isAnswerStreaming: !!streamingAssistantContentId,
       isLatestContextCompress: index === latestCompressIndex,

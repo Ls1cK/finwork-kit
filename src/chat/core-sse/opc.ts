@@ -1,4 +1,4 @@
-import { readAnswerMetadata, readQuestionUpdate, readUserAnswerUpdate, type AnswerMetadata, type AnswerQuestionBlock } from './answer.js';
+import { readAnswerMetadata, readQuestionUpdate, readUserAnswerUpdate, sameFields, type AnswerMetadata, type AnswerQuestionBlock } from './answer.js';
 import {
   asRecord,
   isRoundTerminalStatus,
@@ -215,10 +215,11 @@ function applyRoundFrame<T extends CoreContentBlock>(draft: Draft<T>, frame: Wir
       return true;
     }
     case 'TASK_COMPLETED': {
-      if (draft.state.completion) return false;
       const completion = readCompletion(frame);
       if (!completion) return false;
-      draft.set('completion', completion);
+      if (!draft.state.completion || !sameFields(draft.state.completion, completion)) {
+        draft.set('completion', completion);
+      }
       draft.set('status', completion.status);
       return true;
     }
@@ -291,8 +292,8 @@ function applyReplyFrame<T extends CoreContentBlock>(
   if (frame.type === 'OPC_AGENT_REPLY_START') {
     const role = opc?.agent_role;
     const member = readId(opc?.agent_id);
-    if (reply || !member || (role !== 'leader' && role !== 'worker') || isRoundTerminalStatus(draft.state.status)) return false;
-    draft.set('status', 'running');
+    if (reply || !member || (role !== 'leader' && role !== 'worker')) return false;
+    if (draft.state.status === 'idle') draft.set('status', 'running');
     draft.putReply({
       id: replyId, member, role, name: readId(frame.name) ?? member, avatarUrl: readId(opc?.agent_avatar_url),
       status: 'running', startedAt: parseTimestamp(frame.created_at), blocks: [],

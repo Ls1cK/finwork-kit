@@ -1,4 +1,6 @@
 import { memo, type ReactNode } from 'react';
+import { MarkdownCodeBlock } from '../markdown/MarkdownCodeBlock';
+import type { MessageReferenceAnchor } from '../markdown/referenceAnchors';
 import {
   AssistantContent, AskUserQuestionContent, ContextCompressContent,
   ThinkContent, ToolCallMsg, ToolCallResponse,
@@ -17,6 +19,9 @@ export interface MessageContentItemRenderProps<T extends MessageContent = Messag
   renderMarkdown?: MessageTextRenderer;
   renderContent?: MessageTextRenderer;
   renderText?: MessageTextRenderer;
+  refAnchors?: MessageReferenceAnchor[];
+  renderReference?: (anchor: MessageReferenceAnchor) => ReactNode;
+  onCopy?: (text: string) => void | Promise<void>;
   onSubAgentSelect?: (subagent: SubAgent, item: T) => void;
 }
 
@@ -28,6 +33,17 @@ export interface MessageContentItemProps<T extends MessageContent = MessageConte
   /** 同名覆盖内置类型，新增键支持业务自己的内容类型，返回 null 可隐藏该类型。 */
   renderers?: MessageContentRenderers<T>;
   renderUnknown?: (props: MessageContentItemRenderProps<T>) => ReactNode;
+}
+
+function formatToolPayload(value: unknown): { language: string; code: string } {
+  if (typeof value === 'string') return { language: 'plaintext', code: value };
+  try {
+    const serialized = JSON.stringify(value, null, 2);
+    if (serialized !== undefined) return { language: 'json', code: serialized };
+  } catch {
+    // 含循环引用等不可序列化对象时回退为纯文本。
+  }
+  return { language: 'plaintext', code: String(value) };
 }
 
 function MessageContentItemInner<T extends MessageContent>({
@@ -60,15 +76,50 @@ function MessageContentItemInner<T extends MessageContent>({
           content={item.content ?? ''}
           isStreaming={isStreaming}
           renderContent={props.renderContent ?? props.renderMarkdown}
+          refAnchors={props.refAnchors}
+          renderReference={props.renderReference}
+          onCopy={props.onCopy}
         />
       );
-    case 'TOOL_CALL':
-      return item.tool_call_name
-        ? <ToolCallMsg label={item.tool_call_name} isStreaming={isStreaming} />
-        : null;
+    case 'TOOL_CALL': {
+      if (!item.tool_call_name) return null;
+      const rawState = item.state?.trim();
+      const failedStatus = !isStreaming && rawState && rawState !== 'success' ? rawState : undefined;
+      const label = failedStatus ? `${item.tool_call_name} · ${failedStatus}` : item.tool_call_name;
+      const payloads = ([
+        ['input', '参数', item.input, true],
+        ['output', '输出', item.output, false],
+      ] as const).flatMap(([key, title, value, defaultExpanded]) => {
+        if (value === undefined) return [];
+        const payloadKey = `${collapseKey}_${key}`;
+        const formatted = formatToolPayload(value);
+        const expanded = contentExpandedMap?.[payloadKey]
+          ?? (contentExpandedMap && onContentExpandedChange ? defaultExpanded : undefined);
+        return [(
+          <MarkdownCodeBlock
+            key={payloadKey}
+            collapseKey={payloadKey}
+            title={title}
+            language={formatted.language}
+            code={formatted.code}
+            defaultExpanded={defaultExpanded}
+            expanded={expanded}
+            onExpandedChange={onContentExpandedChange
+              ? (nextExpanded) => onContentExpandedChange(payloadKey, nextExpanded)
+              : undefined}
+            onCopy={props.onCopy}
+          />
+        )];
+      });
+      return (
+        <ToolCallMsg label={label} status={rawState} isStreaming={isStreaming}>
+          {payloads.length > 0 ? payloads : undefined}
+        </ToolCallMsg>
+      );
+    }
     case 'TOOL_RESPONSE':
-      return item.tool_result_name === 'Bash'
-        ? <ToolCallResponse {...expansion} content={item.output ?? ''} /> : null;
+      return item.tool_result_name === 'Bash' && typeof item.output === 'string'
+        ? <ToolCallResponse {...expansion} content={item.output} onCopy={props.onCopy} /> : null;
     case 'SUBAGENTS':
       return (
         <MultiSubAgentCard

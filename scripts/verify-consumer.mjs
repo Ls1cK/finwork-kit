@@ -131,6 +131,7 @@ import {
   type AiMessageProps, type MessageContent,
   type MessageContentRenderers, MessageItem, OpcAnswer, OpcExpertPanel, type OpcExecutionTarget,
 } from '${manifest.name}/chat/ui';
+import type { OpcReply } from '${manifest.name}/chat/core-sse';
 const props: AiMessageProps = { title: 'Consumer UI' };
 // @ts-expect-error Invalid props must fail through published declarations.
 const invalid: AiMessageProps = { connecting: 'yes' };
@@ -140,13 +141,21 @@ const renderers: MessageContentRenderers<BusinessContent> = {
   CUSTOM: ({ item }) => <ThinkContent content={item.auditId} />,
 };
 const target: OpcExecutionTarget = { kind: 'reply', id: 'reply-to-review' };
+const opcReply: OpcReply = {
+  id: 'reply', member: 'worker', name: '专家', role: 'worker', status: 'completed',
+  blocks: [
+    { id: 'tool', type: 'TOOL_CALL', sourceId: 'tool', tool_call_name: 'READ', input: { file_path: 'a.md' }, output: 'ok', state: 'success' },
+    { id: 'msg', type: 'ASSISTANT_MSG', sourceId: 'msg', content: '结论 [来源](#ref:r1)', streaming: false },
+  ],
+};
 createRoot(document.createElement('div')).render(<>
   <AiMessage {...props} />
-  <MarkdownViewer content="**Markdown**" />
+  <MarkdownViewer content="**Markdown**" skipFrontMatter />
   <StreamingMarkdownRenderer content="**Streaming**" isStreaming={false} />
   <AssistantContent content="custom" renderContent={(content, streaming) => <b>{content}{String(streaming)}</b>} />
   <MessageContentItem item={list[0]} renderers={renderers} />
   <MessageContentList list={list} renderers={renderers} renderItem={({ item }, content) => <section data-audit={item.auditId}>{content}</section>} />
+  <MessageContentList list={opcReply.blocks} renderReference={(anchor) => <span>{anchor.idx}</span>} />
   <MessageFileCard file={{ fileName: 'file', auditId: 'audit' }} onPreview={(file) => file.auditId.toUpperCase()} />
   <SubAgentListItem subagent={{ id: 'agent', auditId: 'audit' }} onSelect={(agent) => agent.auditId.toUpperCase()} />
   <MessageActions actions={[{ key: 'feedback', label: '反馈', onClick() {} }]} />

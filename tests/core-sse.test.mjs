@@ -280,3 +280,18 @@ test('vendor fields are preserved without being interpreted as a subagent group'
   assert.equal(state.contentList[0].subAgentRenderConfig.subAgentContents.worker.contentList[0].content, 'answer');
   assert.equal(state.contentList[1], block);
 });
+
+test('subagent creation lifecycle frames decode as known and do not pollute inner content', () => {
+  const raw = [
+    { type: 'SUBAGENT_CREATE_START', id: 's1', name: 'FinWork', tool_call_name: 'create_subagent' },
+    { type: 'SUBAGENT_CREATE', id: 's1', name: 'FinWork', delta: { agent_name: 'FinWork' } },
+    { type: 'SUBAGENT_CREATE_END', id: 's1', name: 'FinWork', tool_call_name: 'create_subagent' },
+    { type: 'SUBAGENT_ASSISTANT_MSG_END', id: 'm1', name: 'FinWork', content: 'done' },
+  ];
+  for (const source of ['stream', 'history']) {
+    const { state } = reduceRound(createOrdinary(), [...frames(raw, { source }), { kind: 'input.end', reason: 'closed' }]);
+    const group = state.contentList[0].subAgentRenderConfig;
+    assert.deepEqual(group.subAgentList.map(({ id, name }) => [id, name]), [['s1', 'FinWork']]);
+    assert.deepEqual(group.subAgentContents.s1.contentList.map(({ content }) => content), ['done']);
+  }
+});
