@@ -11,6 +11,12 @@ description: 用户、助手、OPC 协作和系统消息的布局。
 
 <code src="../examples/message-layout.tsx"></code>
 
+## 组合一条消息
+
+- 用户消息的正文传给 `content`，附件用 `files={<MessageFileList ... />}`，时间或复制操作放在 `metadata`、`onCopy`。
+- 助手消息把 `MessageContentList` 放进 `children`。正在连接时设置 `connecting`。已经连接、尚在运行时可设置 `processing`。状态来自应用的请求或轮次快照。
+- 同一列表中，用每条消息的稳定 ID 做 React key。普通与 OPC 轮次的状态映射见 [SDK 对接组件](/sdk/components)。
+
 ## API
 
 以下组件均支持 `className?: string` 和 `style?: CSSProperties`。

@@ -9,9 +9,11 @@ export default function MessageContents() {
   return (
     <div style={{ display: 'grid', gap: 16 }}>
       <h3>MessageContentList · 按类型分发</h3>
-      <MessageContentList list={[
+      <MessageContentList streamingAssistantContentId="mcp" list={[
         { id: 'think', type: 'THINK_MSG', content: '核对资料并整理重点。' },
-        { id: 'tool', type: 'TOOL_CALL', tool_call_name: '搜索会议纪要' },
+        { id: 'mcp', type: 'TOOL_CALL', tool_call_name: 'mcp__documents__search' },
+        { id: 'tool', type: 'TOOL_CALL', tool_call_name: 'BASH', state: 'success',
+          delta: { command: 'cat /workspace/meeting-notes.md' }, output: '找到 3 条相关记录。' },
         { id: 'result', type: 'TOOL_RESPONSE', tool_result_name: 'Bash', output: '找到 3 条相关记录。' },
         { id: 'agents', type: 'SUBAGENTS', subAgentRenderConfig: { subAgentList: [
           { id: 'summary-agent', description: '纪要助手', prompt: '整理会议纪要中的行动项。' },

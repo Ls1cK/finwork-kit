@@ -9,6 +9,13 @@ description: Markdown、流式文本、代码块与引用来源的用法。
 
 <code src="../examples/markdown.tsx"></code>
 
+## 接入引用来源
+
+1. 在回答文本中保留 `[来源](#ref:ID)`，让 `ID` 对应来源数据的 `referenceId`。
+2. 使用 `MessageContentList` 时，列表按整轮回答计算编号。直接使用 `StreamingMarkdownRenderer` 时，用 `buildRefAnchorsByContentId(list)` 计算编号，并把当前条目对应的数组传入 `refAnchors`。
+3. `renderReference(anchor)` 按 `anchor.referenceId` 查来源，再渲染 `ReferenceAnchor`。同一个来源出现两次会显示不同编号，但可以查到同一份来源数据。来源为空时可返回 `null`。
+4. 引用文本处于行内代码或代码围栏中时按字面展示。流式正文传入累计文本，组件会处理尚未闭合的 Markdown。
+
 ## API
 
 ### MarkdownViewer
@@ -57,10 +64,12 @@ description: Markdown、流式文本、代码块与引用来源的用法。
 | defaultExpanded | `boolean` | `true` | 非受控初始展开状态 |
 | className / style | `string / CSSProperties` | — | 外层样式 |
 | renderContent | `(code: string) => ReactNode` | — | 自定义代码正文展示 |
-| expanded | `boolean` | `true`（非受控） | 受控展开状态 |
+| expanded | `boolean` | — | 受控展开状态。在 `onExpandedChange` 中更新 |
 | collapseKey | `string` | `'code'` | 内部折叠组件 key，变化时重置内部状态 |
 | onExpandedChange | `(expanded: boolean) => void` | — | 展开变化回调 |
 | onCopy | `(text: string) => void \| Promise<void>` | 浏览器剪贴板及兼容回退 | 接管复制动作 |
+
+直接渲染代码时传入原始字符串和语言名。Markdown 围栏由 `MarkdownViewer` 自动渲染为 `MarkdownCodeBlock`。代码块默认展开，想默认收起时传 `defaultExpanded={false}`。需要在不同代码片段间重置非受控折叠状态时，更新 `collapseKey`。折叠头沿用宿主 Ant Design 的 Collapse 内边距，点击复制按钮保持当前展开状态。
 
 ### CodeViewer
 
@@ -77,7 +86,7 @@ description: Markdown、流式文本、代码块与引用来源的用法。
 | --- | --- | --- | --- |
 | anchor | `MessageReferenceAnchor` | 必填 | `{ referenceId: string; idx: number }`，idx 为显示编号 |
 | title | `string` | 必填 | 来源卡片标题 |
-| contents | `readonly ReferenceDisplayItem[]` | 必填 | 来源列表，多条时支持分页 |
+| contents | `readonly ReferenceDisplayItem[]` | 必填 | 来源列表，为空时隐藏编号，多条时支持分页 |
 
 #### ReferenceDisplayItem
 

@@ -32,6 +32,7 @@ export interface MessageContent {
   content?: string;
   input?: unknown;
   output?: unknown;
+  delta?: Readonly<Record<string, unknown>>;
   state?: string;
   tool_call_name?: string;
   tool_result_name?: string;

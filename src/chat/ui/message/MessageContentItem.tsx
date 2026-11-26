@@ -85,14 +85,23 @@ function MessageContentItemInner<T extends MessageContent>({
       if (!item.tool_call_name) return null;
       const rawState = item.state?.trim();
       const failedStatus = !isStreaming && rawState && rawState !== 'success' ? rawState : undefined;
-      const label = failedStatus ? `${item.tool_call_name} · ${failedStatus}` : item.tool_call_name;
+      const mcp = /^mcp__(.+?)__(.+)$/.exec(item.tool_call_name);
+      const label = failedStatus
+        ? `${item.tool_call_name} · ${failedStatus}`
+        : mcp ? `${isStreaming ? '正在调用 MCP' : '调用 MCP 完成'} : ${mcp[1]} - ${mcp[2]}` : item.tool_call_name;
+      const streamedCommand = item.delta?.command;
+      const command = item.input === undefined && /^bash$/i.test(item.tool_call_name) &&
+        typeof streamedCommand === 'string' && streamedCommand.length ? streamedCommand : undefined;
+      const filePath = item.delta?.file_path;
+      const detail = typeof filePath === 'string' ? filePath.split(/[/\\]/).pop() : undefined;
       const payloads = ([
-        ['input', '参数', item.input, true],
+        ['input', '参数', command ?? item.input, true],
         ['output', '输出', item.output, false],
       ] as const).flatMap(([key, title, value, defaultExpanded]) => {
         if (value === undefined) return [];
         const payloadKey = `${collapseKey}_${key}`;
-        const formatted = formatToolPayload(value);
+        const formatted = key === 'input' && command
+          ? { language: 'shell', code: command } : formatToolPayload(value);
         const expanded = contentExpandedMap?.[payloadKey]
           ?? (contentExpandedMap && onContentExpandedChange ? defaultExpanded : undefined);
         return [(
@@ -112,7 +121,7 @@ function MessageContentItemInner<T extends MessageContent>({
         )];
       });
       return (
-        <ToolCallMsg label={label} status={rawState} isStreaming={isStreaming}>
+        <ToolCallMsg label={label} detail={detail} status={rawState} isStreaming={isStreaming}>
           {payloads.length > 0 ? payloads : undefined}
         </ToolCallMsg>
       );

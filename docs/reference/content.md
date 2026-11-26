@@ -37,6 +37,7 @@ description: 内容分发、正文、思考、工具调用和折叠面板。
 | content | `string` | 否 | 回答或思考正文 |
 | input | `unknown` | 否 | 工具调用参数，传入时在 `TOOL_CALL` 下默认展开展示 |
 | output | `unknown` | 否 | 工具执行结果，`TOOL_CALL` 下默认收起展示，`TOOL_RESPONSE` 支持字符串结果 |
+| delta | `Readonly<Record<string, unknown>>` | 否 | 工具流式参数。Bash 缺少 `input` 时用字符串 `command`，字符串 `file_path` 显示为文件名 |
 | state | `string` | 否 | 工具调用状态，非流式且非 `'success'` 时标记异常状态 |
 | tool_call_name / tool_result_name | `string` | 否 | 工具调用名称 / 结果名称 |
 | contextCompressStatus | `'unfinished' \| 'success' \| 'failed'` | 否 | 上下文压缩状态 |
@@ -67,7 +68,7 @@ description: 内容分发、正文、思考、工具调用和折叠面板。
 
 `MessageTextRenderer` 为 `(content: string, isStreaming: boolean) => ReactNode`。`MessageContentRenderers<T>` 为按类型名索引的可选渲染函数集合，每个函数接收 `MessageContentItemRenderProps<T>`，即上表中除 `renderers`、`renderUnknown` 外的属性。
 
-默认支持 `THINK_MSG`、`ASSISTANT_MSG`、`TOOL_CALL`、`TOOL_RESPONSE`、`SUBAGENTS`、`CONTEXT_COMPRESS` 和 `ASK_USER_QUESTION`。`TOOL_CALL` 存在 `input` / `output` 时复用 `MarkdownCodeBlock` 展示详情；`TOOL_RESPONSE` 默认仅展示 `tool_result_name === 'Bash'` 的字符串结果，其他工具可通过 renderers 定制。
+默认支持 `THINK_MSG`、`ASSISTANT_MSG`、`TOOL_CALL`、`TOOL_RESPONSE`、`SUBAGENTS`、`CONTEXT_COMPRESS` 和 `ASK_USER_QUESTION`。`TOOL_CALL` 用代码块展示 `input` / `output`，Bash 缺少 `input` 时可展示 `delta.command`。`delta.file_path` 在卡片上显示文件名。MCP 工具显示服务名、工具名和调用状态。其他工具文案可通过 `renderers` 定制。`TOOL_RESPONSE` 默认展示 `tool_result_name === 'Bash'` 的字符串结果。
 
 ### MessageContentList
 
@@ -84,6 +85,8 @@ description: 内容分发、正文、思考、工具调用和折叠面板。
 | processExpanded | `boolean` | — | 过程面板受控展开状态 |
 | defaultProcessExpanded | `boolean` | `false` | 过程面板初始展开状态 |
 | onProcessExpandedChange | `(expanded: boolean) => void` | — | 过程展开变化回调 |
+
+流式更新时保留条目的 ID，每次更新同一个条目的累积内容。过程拆分时把已经确定的结论条目 ID 作为 `conclusionId` 传入。需要跨消息或任务保存折叠状态时，将展开映射按轮次存储，并在 `onContentExpandedChange` 中用回传的 key 更新。工具参数和输出使用独立 key，展开参数时不会改变输出面板。
 
 ### AssistantContent
 

@@ -11,6 +11,8 @@ description: 自定义消息操作、推荐追问与完成状态。
 
 <code src="../examples/message-actions.tsx"></code>
 
+实际接入时，通常将 `MessageActions` 放到 `AiMessage.footer` 或 `ChatCompletedResult.actions`，将 `SuggestedQuestions` 放到 `AiMessage.suggestions`。提交反馈期间可设置对应操作的 `loading`，接口成功后再更新 `active`。点击推荐问题后，由应用填入输入框或发起下一轮。
+
 ## API
 
 以下组件均支持 `className?: string`、`style?: CSSProperties`。

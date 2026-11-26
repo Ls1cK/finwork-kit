@@ -47,6 +47,7 @@ export default defineConfig({
       ] }],
       '/sdk': [{ title: 'SDK', children: [
         { title: '概览', link: '/sdk/overview' },
+        { title: '对接组件', link: '/sdk/components' },
       ] }],
     },
     footer: `FinWork Kit v${version} · 为专业任务执行构建一致体验`,

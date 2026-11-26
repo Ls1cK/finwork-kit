@@ -4,6 +4,7 @@ import type { MessageFile } from '@lz19.02/finwork-kit/chat/ui';
 import '@lz19.02/finwork-kit/chat/style.css';
 
 const files: MessageFile[] = [{ fileId: 'minutes', fileName: '会议纪要.md' }];
+const attachments: MessageFile[] = [{ fileId: 'agenda', fileName: '业务协同项目会议议题、负责人、完成日期和待办事项汇总（会前资料完整版）.docx' }, ...files];
 
 export default function MessageFiles() {
   const [action, setAction] = useState('点击预览或下载，查看回调收到的文件。');
@@ -11,9 +12,11 @@ export default function MessageFiles() {
   const download = (file: MessageFile) => setAction(`请求下载 ${file.fileName}`);
   return (
     <div style={{ display: 'grid', gap: 16 }}>
+      <h3>用户附件</h3>
+      <MessageFileList files={attachments} onPreview={preview} />
+      <h3>产出文件</h3>
       <MessageFileCard file={files[0]} onPreview={preview} onDownload={download} />
-      <MessageFileList files={files} onPreview={preview} />
-      <SkillOutputCard file={{ fileName: '纪要生成技能.zip' }} isSkillDebugTask onDownload={download} />
+      <SkillOutputCard file={{ fileName: '纪要生成技能.zip' }} isSkillDebugTask onPreview={preview} />
       <OutputFilesCollapse
         outputFiles={files} packageFile={{ fileName: '本轮文件.zip' }}
         skillFiles={[{ fileId: 'skill', fileName: '纪要生成技能.zip' }]}

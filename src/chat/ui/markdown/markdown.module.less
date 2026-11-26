@@ -1,12 +1,6 @@
 @import './tokens.less';
 
 .plainText { white-space: pre-wrap; }
-.codeCollapse > :global(:is([class$="-collapse"], [class*="-collapse "])) > :global(:is([class$="-collapse-item"], [class*="-collapse-item "])) > :global(:is([class$="-collapse-header"], [class*="-collapse-header "])) {
-  padding: 6px 16px;
-  background: @bg-code-dark;
-  color: @text-tertiary;
-}
-
 .codeCollapse > :global(:is([class$="-collapse"], [class*="-collapse "])) > :global(:is([class$="-collapse-item"], [class*="-collapse-item "])) > :global(:is([class$="-collapse-content"], [class*="-collapse-content "])) > :global(:is([class$="-collapse-content-box"], [class*="-collapse-content-box "])) {
   padding: 0;
 }
@@ -256,7 +250,6 @@ blockquote.md {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 6px 16px;
     background: @bg-code-dark;
     color: @text-tertiary !important;
     font-size: 12px;
@@ -267,10 +260,19 @@ blockquote.md {
   }
 }
 
-.copyIcon {
+.codeCollapse .copyIcon {
   cursor: pointer;
   font-size: 14px;
-  &:global(:is([class$="-btn"], [class*="-btn "])) { width: auto; height: auto; padding: 0; color: @text-tertiary; line-height: 1; }
+  &:global(:is([class$="-btn"], [class*="-btn "])) {
+    display: inline-flex;
+    align-items: center;
+    width: auto;
+    height: auto;
+    padding: 0;
+    border: 0;
+    color: @text-tertiary;
+    line-height: 1;
+  }
 
   &:hover {
     color: @text-light;

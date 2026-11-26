@@ -130,13 +130,16 @@
 }
 
 .eventRole {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
   padding-inline: 8px;
   border-radius: 12px;
   background: @light;
   color: @secondary;
   font-size: 12px;
   font-weight: 600;
-  line-height: 20px;
+  line-height: 18px;
   white-space: nowrap;
 }
 
@@ -175,6 +178,7 @@
 }
 
 .dispatchCard { background: @light; }
+.dispatchCard > .cardHeading { min-height: 46px; }
 
 .dispatch,
 .cardHeading {

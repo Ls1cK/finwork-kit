@@ -21,7 +21,8 @@ export interface ReferenceAnchorProps {
 /** 引用字段的业务映射由宿主完成，组件只负责来源卡片和分页展示。 */
 export const ReferenceAnchor = memo(function ReferenceAnchor({ anchor, title, contents }: ReferenceAnchorProps) {
   const [contentIndex, setContentIndex] = useState(0);
-  const index = Math.min(contentIndex, Math.max(0, contents.length - 1));
+  if (!contents.length) return null;
+  const index = Math.min(contentIndex, contents.length - 1);
   const current = contents[index];
   const changePage = (delta: number) => setContentIndex((index + delta + contents.length) % contents.length);
   const url = current?.url?.trim().toLowerCase().startsWith('javascript:') ? undefined : current?.url;

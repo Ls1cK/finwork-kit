@@ -69,7 +69,7 @@ export default function OpcConversation() {
           onTaskChange={setSelectedId}
           status={selected.status}
           headerAction={<button type="button" onClick={() => setSelectedId(undefined)}>关闭详情</button>}
-          style={{ maxHeight: 360, border: '1px solid var(--finwork-border-color, #e8e8e8)' }}
+          style={{ height: 'min(520px, 65vh)', border: '1px solid var(--finwork-border-color, #e8e8e8)' }}
         >
           <TaskCompletedSplit
             key={selected.id}

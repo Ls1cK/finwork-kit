@@ -9,7 +9,17 @@ description: 浏览 FinWork Kit 的组件示例与 API。
 
 ## 组件
 
-所有组件通过 props、回调或渲染插槽接收依赖。宿主负责 store 订阅、接口调用、权限、路由、下载、埋点和业务状态更新。消息解析与任务完成判定由宿主提供。
+所有组件通过 props、回调或渲染插槽接收数据。应用持有状态并负责接口调用和交互。需要把 SSE 或历史记录转为组件数据时，可使用 [SDK](/sdk/overview)。
+
+### 从数据选组件
+
+| 已有数据 | 用法 |
+| --- | --- |
+| 一条 Markdown 或代码字符串 | 完整文档用 `MarkdownViewer`。累积中的回答用 `StreamingMarkdownRenderer`。只显示代码用 `CodeViewer`，需要折叠和复制时用 `MarkdownCodeBlock`。 |
+| 一轮普通回答的内容数组 | 用 `MessageContentList` 分发内容，外层可组合 `AiMessage`。只有一条回答正文时可直接用 `AssistantContent`。 |
+| 同时有用户、助手和系统消息 | 页面按消息角色渲染对应组件，用消息 ID 作为列表 key。需要统一容器或插入页脚时用 `MessageItem`。 |
+| OPC 轮次状态 | 把 SDK 时间线转成 `OpcTimelineEntry[]`，传给 `OpcAnswer`。详情入口回传执行 target，可据此组合 `OpcExpertPanel`。参见 [SDK 对接组件](/sdk/components)。 |
+| 文件、状态和操作 | 把 `MessageFileList` 放进用户消息的 `files`，用 `OutputFilesCollapse` 渲染产出文件。用 `MessageActions`、`ChatCompletedResult` 和 `SuggestedQuestions` 组合回答下方的操作。 |
 
 ### 组件清单
 
@@ -78,7 +88,7 @@ description: 浏览 FinWork Kit 的组件示例与 API。
 
 <code src="../examples/content-extension.tsx"></code>
 
-默认分发支持 `THINK_MSG`、`ASSISTANT_MSG`、`TOOL_CALL`、`TOOL_RESPONSE`、`SUBAGENTS`、`CONTEXT_COMPRESS`、`ASK_USER_QUESTION`。工具调用默认显示 `tool_call_name`，执行结果沿用原组件仅展示 `Bash` 的规则。工具名称映射、参数摘要、代码高亮通过对应 `renderers` 和具体组件的 props 接入。
+默认分发支持 `THINK_MSG`、`ASSISTANT_MSG`、`TOOL_CALL`、`TOOL_RESPONSE`、`SUBAGENTS`、`CONTEXT_COMPRESS`、`ASK_USER_QUESTION`。工具调用显示名称、状态和可用的参数、输出，MCP 调用还显示服务名。独立的工具结果默认展示 Bash 字符串结果。自定义工具文案和结果通过 `renderers` 接入，详见[消息内容](/reference/content)。
 
 `AssistantContent` 缺省通过 `StreamingMarkdownRenderer` 渲染回答，思考内容缺省通过 `StreamingTextRenderer` 渲染。提供 `renderContent(content, isStreaming)` 可整体接管正文。内容列表和单项分发也接收 `renderContent`，原有 `renderMarkdown` 继续兼容，优先使用 `renderContent`。
 

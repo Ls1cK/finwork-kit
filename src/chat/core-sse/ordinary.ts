@@ -256,6 +256,9 @@ export function reduceOrdinaryRound<T extends CoreContentBlock = never>(
     if (!isTool && type !== 'TOOL_RESPONSE' && !text && !phase && index < 0) return;
 
     const current: OrdinaryBlock | undefined = list[index];
+    // Legacy streams can emit a blank snapshot after the answer text.
+    if (source === 'stream' && type === 'ASSISTANT_MSG' && !phase && text?.mode === 'replace' &&
+      text.text.length && !text.text.trim() && current?.content?.trim()) return;
     const content = text?.mode === 'replace' ? text.text
       : text?.mode === 'append' ? (current?.content ?? '') + text.text : current?.content;
     const id = current?.id ?? nextId(type, sourceId);

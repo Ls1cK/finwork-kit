@@ -7,7 +7,11 @@ description: 文件卡片、文件列表、技能文件与输出文件区域。
 
 组件负责文件展示与操作入口，预览和下载通过回调交给调用方。示例中的操作仅展示回调结果。
 
+`MessageFileList` 的默认附件卡片使用单行文件名，悬浮可查看完整名称。单独使用 `MessageFileCard` 时，长文件名可以换行。
+
 <code src="../examples/message-files.tsx"></code>
+
+把输入文件放在 `UserMessage.files` 的 `MessageFileList` 中。把输出文件放在 `AiMessage.output` 的 `OutputFilesCollapse` 中。存在打包文件时传入 `packageFile`，应用在 `onDownload` 里使用文件 ID 请求下载，并将请求状态传回 `downloading`。同名但不同 ID 的文件需要使用稳定的 ID 区分。
 
 ## API
 

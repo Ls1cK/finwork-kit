@@ -9,6 +9,8 @@ description: 子智能体列表、独立卡片与选择回调。
 
 <code src="../examples/subagents.tsx"></code>
 
+直接渲染数组时用 `MultiSubAgentCard`。通过 `MessageContentList` 渲染时，将数组放在 `SUBAGENTS` 内容的 `subAgentRenderConfig.subAgentList` 中，点击后通过 `onSubAgentSelect` 取得子智能体和来源条目。详情区和选中状态由应用管理。需要按名称或头像定制单行时，使用 `renderSubAgent` 组合 `SubAgentListItem`。
+
 ## API
 
 以下组件均支持 `className?: string`、`style?: CSSProperties`。泛型 `T extends SubAgent` 保留附加字段。

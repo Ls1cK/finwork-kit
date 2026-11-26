@@ -81,6 +81,15 @@ test('only natural close consumes the queued tail; retired answers ignore furthe
   }
 });
 
+test('a legacy blank snapshot cannot replace streamed assistant content', () => {
+  const state = reduceRound(createOrdinary(), frames([
+    { type: 'ASSISTANT_MSG', id: 'initial', content: ' ' },
+    { type: 'ASSISTANT_MSG', id: 'answer', content: '普通回答' },
+    { type: 'ASSISTANT_MSG', id: 'blank', content: ' ' },
+  ])).state;
+  assert.deepEqual(state.contentList.map(({ content }) => content), ['普通回答']);
+});
+
 test('ordinary delta-only recordings preserve spaces and legacy history snapshots remain distinct', () => {
   const values = [
     { type: 'ASSISTANT_MSG', text_delta: 'hello' },

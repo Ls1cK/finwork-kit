@@ -1,6 +1,6 @@
 ---
 title: FinWork Kit · 组件与 SDK
-description: 面向金融与办公智能体应用的组件与 SDK 使用文档。
+description: React 对话组件、SSE 事件归并和历史回放使用文档。
 sidebar: false
 toc: false
 hero:
@@ -28,9 +28,8 @@ features:
 
 <section className="finwork-start">
   <h2>从这里开始</h2>
-  <p>FinWork 是面向金融与办公场景的专业级任务执行智能体产品。这里提供配套组件与 SDK 的使用文档。</p>
   <div className="finwork-doc-links">
-    <a href="/guide/introduction"><strong>了解 FinWork Kit</strong><span>产品定位、适用场景与使用导航</span></a>
+    <a href="/guide/introduction"><strong>了解 FinWork Kit</strong><span>公开入口与用途</span></a>
     <a href="/guide/getting-started"><strong>快速开始</strong><span>安装、依赖与样式配置</span></a>
     <a href="/reference/overview"><strong>组件</strong><span>组件示例、属性与扩展接口</span></a>
     <a href="/sdk/overview"><strong>SDK</strong><span>实时归并、历史回放与接入示例</span></a>
@@ -38,6 +37,6 @@ features:
 </section>
 
 <aside className="finwork-release-note">
-  <strong>v0.1.0 · UI 初版</strong>
+  <strong>v1.0.0-beta.0</strong>
   <span>消息 UI、Markdown 与 OPC 协作组件可搭配流式归并和历史回放 SDK 使用。</span>
 </aside>

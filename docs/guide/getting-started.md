@@ -1,47 +1,46 @@
 ---
 title: 快速开始
-description: 接入 FinWork Kit v0.1.0 UI 组件。
+description: 安装 FinWork Kit 并接入对话组件。
 ---
 
 # 快速开始
 
-v0.1.0 已提供消息 UI、Markdown、流式文本、代码高亮及引用展示。
+本页介绍如何安装依赖并渲染第一条消息。已有状态数据时可以直接使用组件。处理 SSE 或历史记录时再接入 [SDK](/sdk/overview)。
 
 ## 安装
 
-在应用项目中安装 FinWork Kit。请先确保项目配置的 npm 源中已有所需版本。
+请确认项目配置的 npm 源已提供 FinWork Kit，然后在应用项目中安装。以下命令使用该 npm 源的 `latest` 标签。
 
 ```bash
-pnpm add @lz19.02/finwork-kit@0.1.0
+pnpm add @lz19.02/finwork-kit
 ```
 
-## React 环境
+## UI 依赖
 
 新项目建议使用以下已验证的 React 版本。React 与 React DOM 通过 peerDependencies 与宿主共享，当前兼容范围为 `^18.3.1`。
 
 ```bash
-pnpm add react@18.3.1 react-dom@18.3.1
+pnpm add react@18.3.1 react-dom@18.3.1 antd@4.24.8 @ant-design/icons@4.8.3
 ```
 
-应用已有兼容版本时可直接复用。宿主同时声明 `antd@^4.24.8` 与 `@ant-design/icons@^4.8.3`，这些 peer 与 React 一起共享实例。ahooks、Markdown 解析、YAML 与代码高亮由 Kit 自动安装。
+应用已有兼容版本时可直接复用。React、React DOM、Ant Design v4 和图标库与宿主共享实例。Markdown 解析、YAML、代码高亮等实现依赖随 Kit 安装。`chat/core-sse` 和 `chat/core-detail` 可以在 Node ESM 中直接导入，运行时无需加载 UI 或 CSS。
 
 ## 首次使用
 
 在应用入口加载宿主的 Ant Design 主题和 Kit 编译后的 CSS，随后挂载应用。Kit CSS 包含作用域内的组件和代码高亮样式。
 
-组件源码各自导入所需的 CSS Module，全量样式入口独立提供预加载能力。发布包使用单份 `chat/style.css`，由宿主入口显式加载。
+在应用入口静态导入两份样式。使用 Ant Design 默认主题时可以直接复制下面两行。已有主题的项目将第一行替换为自己的样式入口。
 
 ```tsx | pure
-// 替换为宿主已有的 Ant Design 主题入口。
-import './styles/antd-theme.less';
+import 'antd/dist/antd.css';
 import '@lz19.02/finwork-kit/chat/style.css';
 ```
 
-下面的示例由应用提供消息内容，Kit 负责展示。
+将下面的示例组件挂载到应用中。示例传入了一条用户消息、一个思考块和一个 Markdown 回答。应用已有数据时，将每条内容映射为至少包含 `id` 和 `type` 的对象，保持同一条内容的 ID 在更新前后稳定。
 
 <code src="../examples/messages.tsx"></code>
 
-两份 CSS 应在应用入口静态导入。即使消息模块通过 `lazy()` 加载，样式也应先于它加载，避免先展示旧组件、随后切换 Kit 及其样式引起箭头布局变化。
+即使消息模块通过 `lazy()` 加载，样式也应先于它加载，避免首次渲染后折叠头、箭头和间距跳变。
 
 ## 宿主配置与主题
 
@@ -89,8 +88,20 @@ export default function CustomAnswer() {
 }
 ```
 
-## 接入业务状态
+## 接入应用状态
 
-在应用的适配组件中订阅 store 或读取 context，再把数据和动作传入 Kit。复制、下载、反馈、路由跳转及任务完成判定由应用维护。组件接收展示所需的数据、回调和渲染插槽。
+1. 页面从自己的 props、context 或 store 读取内容。完整普通回答交给 `MessageContentList`，单条 Markdown 可以直接用 `AssistantContent`。
+2. 流式回调将增量归并成累积正文，更新同一个内容项，并将它的 `msg_content_id || id` 传入 `streamingAssistantContentId`。流结束时清空该属性。使用 SDK 时直接取当前轮次的 `activeContentId`。参见[实时接入](/sdk/overview#处理流式对话)。
+3. 对话历史通过同样的组件渲染。SDK 回放的数据按轮次提供用户消息、状态和文件。参见[回放历史对话](/sdk/overview#回放历史对话)。
+4. 在回调里执行下载、提交反馈、续问和打开详情等动作。把加载、禁用或选中状态作为 props 传回组件。
 
-更多示例和 API 见[组件](/reference/overview)，自定义内容类型见[消息内容](/reference/content#自定义内容)。多智能体协作对话可参考 [OPC 协作对话](/reference/opc)。
+## 接入排查
+
+| 现象 | 检查项 |
+| --- | --- |
+| 安装时报找不到包或版本 | 确认项目配置的 npm 源已发布该包，并设置了 `latest` 标签。使用本地构建产物时，将实际的 `.tgz` 路径传给 `pnpm add`。 |
+| 无法解析导入 | 使用公开子路径导入。UI 导入 `@lz19.02/finwork-kit/chat/ui`，纯 SDK 导入对应 core 子路径。 |
+| 可渲染但没有样式或首次展开跳动 | 检查两份 CSS 是否从应用入口加载，且 Ant Design 主题先于 Kit 样式。 |
+| 流式正文只剩最后一段 | 传给组件的是累计内容。如果后端发 `text_delta`，先追加到旧正文或使用 SDK 归并。 |
+| 引用有编号但点不到来源 | 检查是否传入 `renderReference`，并确认回调按 `referenceId` 取得来源数据。参见[Markdown 与引用](/reference/markdown#接入引用来源)。 |
+| 受控折叠点击无变化 | 在变更回调里更新 `expanded` 或 `contentExpandedMap`，由组件重新接收新值。 |

@@ -435,7 +435,17 @@ test('controlled expansion and callbacks work without a Provider', async () => {
 
     const copied = [];
     await render(h(ui.MarkdownCodeBlock, { language: 'javascript', code: 'const a = 1;', onCopy: (code) => copied.push(code) }));
-    await click(container.querySelector('[aria-label="复制代码"]'));
+    const antStyles = document.createElement('style');
+    antStyles.textContent = readFileSync(join(rootDirectory, 'node_modules/antd/dist/antd.css'), 'utf8');
+    document.head.append(antStyles);
+    const codeHeader = container.querySelector('.ant-collapse-header');
+    const copyButton = container.querySelector('[aria-label="复制代码"]');
+    const headerStyle = window.getComputedStyle(codeHeader);
+    assert.equal(headerStyle.paddingTop, '12px');
+    assert.equal(headerStyle.paddingBottom, '12px');
+    assert.equal(headerStyle.paddingRight, '40px');
+    assert.equal(window.getComputedStyle(copyButton).height, 'auto');
+    await click(copyButton);
     assert.deepEqual(copied, ['const a = 1;']);
     assert.equal(container.querySelector('.ant-collapse-header').getAttribute('aria-expanded'), 'true');
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 400)); });
@@ -581,6 +591,15 @@ test('MessageContentList renders tool details, failed status and reference cards
   assert.match(toolMarkup, /out\.md/);
   assert.match(toolMarkup, /READ_FILE · error/);
   assert.match(toolMarkup, /anticon-exclamation-circle/);
+  const incrementalTools = html(ui.MessageContentList, {
+    list: [
+      { id: 'mcp', type: 'TOOL_CALL', tool_call_name: 'mcp__documents__search' },
+      { id: 'bash', type: 'TOOL_CALL', tool_call_name: 'BASH', delta: { command: 'cat notes.md' } },
+    ],
+    streamingAssistantContentId: 'mcp',
+  });
+  assert.match(incrementalTools, /正在调用 MCP : documents - search/);
+  assert.match(incrementalTools, /cat notes\.md/);
 
   const refList = [
     { id: 'think', type: 'THINK_MSG', content: '思考 [来源](#ref:skip)' },
@@ -741,6 +760,7 @@ test('MessageContentList renders tool details, failed status and reference cards
   assert.equal(ui.preprocessStreamingMarkdown('```md\n[来源](#ref:literal'), '```md\n[来源](#ref:literal\n```');
   assert.equal(ui.preprocessStreamingMarkdown('> ```md\n> [来源](#ref:literal'), '> ```md\n> [来源](#ref:literal\n> ```');
   assert.equal(ui.preprocessStreamingMarkdown('示例 `[来源](#ref:literal'), '示例 ');
+  assert.equal(ui.preprocessStreamingMarkdown('~~~md\n[来源](#ref:literal'), '~~~md\n[来源](#ref:literal\n~~~');
   const literalFenceHtml = html(ui.MessageContentList, {
     list: [{ id: 'stream-literal', type: 'ASSISTANT_MSG', content: '```md\n[来源](#ref:literal' }],
     renderReference,

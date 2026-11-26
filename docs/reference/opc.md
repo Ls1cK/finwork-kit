@@ -72,9 +72,9 @@ description: 组合团长回复、任务派发、团员回传和专家执行详�
 
 ## 接入 OPC 数据
 
-1. 流式帧和历史记录使用同一套消息结构。FinPlus 将 OPC 回答标为 `opc_assistant`，把有序事件、派发与回复索引和协作总结保存到 `message.opcTimeline`。
-2. 按 `role` 选择正文组件。将 `message.opcTimeline` 投影为 `OpcTimelineEntry[]` 并传给 `OpcAnswer`。仅对当前流式团长块传入 `isStreaming`。有总结且没有团长正文时，可追加一条团长事件。
-3. 在 `onOpenExecution` 中用消息 ID 或运行 ID 与 target 定位任务。把已选专家、任务及其执行内容传给面板。切换任务后可用任务标识重置滚动和展开区状态。
-4. 从消息的共用字段提供错误和页脚。FinPlus 把执行用量和完成态保存在 `contentList`，文件、反馈、推荐追问沿用原有字段。分享、权限和下载由宿主实现。
+1. 使用 `replayTaskRecords` 或 `reduceStreamBatch` 得到 `OpcRoundState`。按 `state.timeline` 的已有顺序从 `replies` 和 `assignments` 取数据，生成 `OpcTimelineEntry[]`。已有自己状态模型时也可直接生成条目。类型映射示例见 [SDK 对接组件](/sdk/components#opc-时间线与详情)。
+2. 将条目传给 `OpcAnswer`，在统一消息列表里用 `role="opc_assistant"` 的 `MessageItem` 包裹。独立单轮可以使用 `OpcRound`。错误、文件、用量和操作区域分别通过 `error` 和 `footer` 传入。
+3. 点击状态时保存当前轮次和 `onOpenExecution` 回传的 target，用 `resolveOpcExecution` 查询执行项。再把专家列表、当前专家的任务、选中 ID 和正文传给面板。切换专家时一起更新任务列表和选中的任务。
+4. 给专家面板的外层提供滚动区域约束，例如有明确高度的抽屉或 flex 容器。切换任务时按任务 ID 恢复或重置折叠状态。用 `scrollRef` 控制滚动视口，用 `contentRef` 观察正文尺寸。
 
 运行中的追问输入由宿主按 `pendingQuestion` 提供。追问卡片展示本轮的题目和已选或已填写答案。运行中的专家状态与工具调用使用扫光动效，思考标题采用文字扫光与逐点动画，系统偏好减少动态效果时静态展示。

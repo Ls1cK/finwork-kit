@@ -16,7 +16,7 @@ export interface StreamingMarkdownRendererProps {
 }
 
 const STRONG_MARKDOWN_RE =
-  /(```|^\s*#{1,6}\s|\*\*[^*]+\*\*|^\s*[-*+]\s|^\s*\d+\.\s|\[.*\]\(.*\)|^\s*>\s)/m;
+  /(```|^ {0,3}~{3,}|^\s*#{1,6}\s|\*\*[^*]+\*\*|^\s*[-*+]\s|^\s*\d+\.\s|\[.*\]\(.*\)|^\s*>\s)/m;
 const REF_HREF_PREFIXES = ['#ref:', '#ref='] as const;
 
 export const StreamingMarkdownRenderer = memo(function StreamingMarkdownRenderer({
