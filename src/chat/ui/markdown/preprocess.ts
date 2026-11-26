@@ -1,7 +1,11 @@
 import {
   isEscaped,
   mapNonCodeMarkdown,
+  normalizeRefId,
   REFERENCE_ID_CHAR_SOURCE,
+  REFERENCE_LEFT_SOURCE,
+  REFERENCE_RIGHT_SOURCE,
+  REFERENCE_TAIL_SOURCE,
   scanTrailingUnclosedCode,
 } from './referenceAnchors';
 
@@ -92,15 +96,18 @@ export const preprocessStreamingExtra = (rawContent: string): string => {
   // 2a. Incomplete REFERENCE Anchor: [来源](#ref:news_search ... 未闭合
   // 流式对话中引用锚点逐步累积，残句若落入通用 Incomplete Link 规则会被整体删除，
   // 造成下一帧补全后又出现 → 闪烁。仅当末尾处于非代码正文时自动补 )，避免改动未闭合代码块或行内代码字面量。
+  // 左括号 `(（【[`、右括号 `)）]】` 任意组合，冒号兼容全角，残句统一归一为半角链接。
   const codeState = scanTrailingUnclosedCode(content);
   if (!codeState.unclosedFence && codeState.unclosedInlineIndex < 0) {
-    const trailingRef = new RegExp(`\\[来源\\]\\(#${REFERENCE_ID_CHAR_SOURCE}*$`).exec(content);
+    const trailingRef = new RegExp(
+      `${REFERENCE_LEFT_SOURCE}来源${REFERENCE_RIGHT_SOURCE}${REFERENCE_LEFT_SOURCE}#(${REFERENCE_ID_CHAR_SOURCE}*)$`,
+    ).exec(content);
     if (
       trailingRef &&
       trailingRef.index >= codeState.lastCodeEnd &&
       !isEscaped(content, trailingRef.index)
     ) {
-      content = `${content})`;
+      content = `${content.slice(0, trailingRef.index)}[来源](#${normalizeRefId(trailingRef[1])})`;
     }
   }
 
@@ -109,7 +116,7 @@ export const preprocessStreamingExtra = (rawContent: string): string => {
   // 6. 同时在非代码片段内保护 **mcp__{server}__{tool}**，防止内部 __ 被解析为强调。
   // 末尾未闭合行内代码片段原样保留，交由后续 preprocessMarkdown 处理。
   const brokenRefRe = new RegExp(
-    `\\[来源\\]\\((#ref[:=])(?!${REFERENCE_ID_CHAR_SOURCE}+(?:[)）]|\\][)）]?))`,
+    `\\[来源\\]\\((#ref[:=：])(?!${REFERENCE_ID_CHAR_SOURCE}+${REFERENCE_TAIL_SOURCE})`,
     'g',
   );
   const transformProse = (prose: string) =>

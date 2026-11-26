@@ -38,7 +38,7 @@ description: Markdown、流式文本、代码块与引用来源的用法。
 | onCopy | `(text: string) => void \| Promise<void>` | — | 接管代码块复制 |
 | overrides | `MarkdownToJSX.Options['overrides']` | — | 标签渲染定制；自定义 a 会覆盖引用链接渲染 |
 
-默认隐藏图片并跳过 front matter 剥离，保留不完整 Markdown 修复与平滑输出。引用标记使用 `[来源](#ref:ID)`（兼容 `#ref=` 及常见畸形尾括号并归一化），可通过 `buildRefAnchorsByContentId` 为一轮回答生成编号，或由 `MessageContentList` 自动计算。
+默认隐藏图片并跳过 front matter 剥离，保留不完整 Markdown 修复与平滑输出。引用标记使用 `[来源](#ref:ID)`（左括号 `(（【[`、右括号 `)）]】` 任意组合，兼容 `#ref=`、`#ref：`，收尾可多一个右括号，统一归一化），可通过 `buildRefAnchorsByContentId` 为一轮回答生成编号，或由 `MessageContentList` 自动计算。
 
 ### StreamingTextRenderer
 

@@ -6,12 +6,19 @@ export interface ReferenceContent {
 }
 
 /** 引用锚点正则会提取的 referenceId（形如 news_search:1）。
- * 分隔符兼容 `#ref:` 与 `#ref=`（LLM 偶发用等号）；referenceId 禁止空白、括号、引号/反引号及常见句读标点，
- * 防止未闭合的残缺引用跨行/跨段或跨标点吞掉后续正常引用；
- * 同时兼容把收尾 `)` 误写成 `]`、`）`、`])` 或 `]）` 的畸形锚点。 */
+ * LLM 偶发混用中英文符号，按「左括号 来源 右括号 左括号 #ref 分隔符 ID 右括号」宽松匹配：
+ * 左括号 `(（【[`、右括号 `)）]】` 任意组合，分隔符 `:`、`：`、`=`。
+ * referenceId 禁止空白、括号、引号/反引号及常见句读标点，防止未闭合的残缺引用跨行/跨段或跨标点吞掉后续正常引用；
+ * referenceId 内的全角冒号归一化为半角。 */
 export const REFERENCE_ID_CHAR_SOURCE = '[^\\s[\\]()（）<>`"\'，。；！？、】【“”‘’,;!?]';
+export const REFERENCE_LEFT_SOURCE = '[(（【\\[]';
+export const REFERENCE_RIGHT_SOURCE = '[)）\\]】]';
+/** 部分模型会在引用末尾多输出一个右括号，匹配时将它一并视为引用的一部分。 */
+export const REFERENCE_TAIL_SOURCE = `${REFERENCE_RIGHT_SOURCE}${REFERENCE_RIGHT_SOURCE}?`;
 export const REFERENCE_ANCHOR_SOURCE =
-  `\\[来源\\]\\(#ref[:=](${REFERENCE_ID_CHAR_SOURCE}+)(?:[)）]|\\][)）]?)`;
+  `${REFERENCE_LEFT_SOURCE}来源${REFERENCE_RIGHT_SOURCE}${REFERENCE_LEFT_SOURCE}#ref[:=：](${REFERENCE_ID_CHAR_SOURCE}+)${REFERENCE_TAIL_SOURCE}`;
+
+export const normalizeRefId = (referenceId: string): string => referenceId.replace(/：/g, ':');
 
 /** 一条引用锚点：referenceId + 该锚点分配的展示下标 idx */
 export interface MessageReferenceAnchor {
@@ -238,7 +245,7 @@ export const extractRefIdsFromText = (text: string): string[] => {
     let match: RegExpExecArray | null;
     while ((match = pattern.exec(prose))) {
       if (!isEscaped(prose, match.index)) {
-        ids.push(match[1]);
+        ids.push(normalizeRefId(match[1]));
       }
     }
     return prose;
@@ -275,8 +282,9 @@ export const replaceRefAnchorsWithIdx = (
   let index = 0;
   return mapNonCodeMarkdown(text, (prose) => {
     const pattern = new RegExp(REFERENCE_ANCHOR_SOURCE, 'g');
-    return prose.replace(pattern, (match, referenceId: string, offset: number) => {
+    return prose.replace(pattern, (match, rawReferenceId: string, offset: number) => {
       if (isEscaped(prose, offset)) return match;
+      const referenceId = normalizeRefId(rawReferenceId);
       const anchor = anchors[index];
       index += 1;
       if (!anchor || anchor.referenceId !== referenceId) return match;

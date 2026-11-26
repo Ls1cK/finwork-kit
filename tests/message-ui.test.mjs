@@ -598,6 +598,20 @@ test('MessageContentList renders tool details, failed status and reference cards
     ]),
     '(A [1](#ref:a:2)) B [2](#ref:a:3)',
   );
+  assert.deepEqual(
+    ui.extractRefIdsFromText('A 【来源】（#ref：a：1） B (来源]【#ref:a:2) C [来源）[#ref=a:3】 D [来源](#ref:a:4））E [来源](#ref：incomplete'),
+    ['a:1', 'a:2', 'a:3', 'a:4'],
+  );
+  assert.equal(
+    ui.replaceRefAnchorsWithIdx('A 【来源】（#ref：a：1）后文 B (来源][#ref=a:2】）', [
+      { referenceId: 'a:1', idx: 1 },
+      { referenceId: 'a:2', idx: 2 },
+    ]),
+    'A [1](#ref:a:1)后文 B [2](#ref:a:2)',
+  );
+  assert.equal(ui.preprocessStreamingExtra('论述 【来源】（#ref：a：1'), '论述 [来源](#ref:a:1)');
+  assert.equal(ui.preprocessStreamingExtra('论述 (来源][#ref:a:1'), '论述 [来源](#ref:a:1)');
+  assert.equal(ui.preprocessStreamingExtra('第一句[来源](#ref：partial，第二句'), '第一句\\[来源](#ref：partial，第二句');
   const renderReference = ({ referenceId, idx }) => h('button', { 'data-ref-id': referenceId }, `[${idx}]`);
   for (const extraProps of [{}, { conclusionId: 'a2', processExpanded: true }]) {
     const refMarkup = html(ui.MessageContentList, { list: refList, renderReference, ...extraProps });
@@ -767,6 +781,20 @@ test('MessageContentList renders tool details, failed status and reference cards
     assert.equal(headers[1].getAttribute('aria-expanded'), 'false');
     await act(async () => headers[1].click());
     assert.deepEqual(toggles, [['ok-tool_TOOL_CALL_output', true]]);
+
+    const content = '详见【来源】（#ref:news:1）';
+    const frames = [];
+    globalThis.requestAnimationFrame = (callback) => frames.push(callback);
+    globalThis.cancelAnimationFrame = () => {};
+    await act(async () => root.render(h(ui.MessageContentList, {
+      list: [{ id: 'streaming-ref', type: 'ASSISTANT_MSG', content }],
+      streamingAssistantContentId: 'streaming-ref',
+      renderReference,
+    })));
+    await act(async () => {
+      for (let i = 0; i < content.length; i += 1) frames[i](i * 16);
+    });
+    assert.equal(container.querySelector('[data-ref-id="news:1"]')?.textContent, '[1]');
   } finally {
     await act(async () => root.unmount());
     await window.happyDOM.close();

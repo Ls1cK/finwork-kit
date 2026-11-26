@@ -23,7 +23,7 @@ export const StreamingMarkdownRenderer = memo(function StreamingMarkdownRenderer
   content, isStreaming = false, refAnchors, renderReference, onCopy, overrides,
 }: StreamingMarkdownRendererProps) {
   const displayed = useSmoothStream(content, isStreaming);
-  const markdown = !isStreaming || STRONG_MARKDOWN_RE.test(content);
+  const markdown = !isStreaming || !!refAnchors?.length || STRONG_MARKDOWN_RE.test(content);
   const displayContent = useMemo(
     () => refAnchors ? replaceRefAnchorsWithIdx(displayed, refAnchors) : displayed,
     [displayed, refAnchors],
