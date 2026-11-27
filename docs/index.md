@@ -37,6 +37,6 @@ features:
 </section>
 
 <aside className="finwork-release-note">
-  <strong>v1.0.0-beta.0</strong>
-  <span>消息 UI、Markdown 与 OPC 协作组件可搭配流式归并和历史回放 SDK 使用。</span>
+  <strong>v1.0.0-beta.2</strong>
+  <span>统一 OPC 时间线中团长、任务派发与专家卡片的间距和标题样式。</span>
 </aside>

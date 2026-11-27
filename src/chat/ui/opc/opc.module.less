@@ -90,8 +90,13 @@
   overflow-wrap: anywhere;
 }
 
-.event[data-kind='leader'] .eventBody {
-  padding: 12px clamp(12px, 3%, 20px) 16px;
+.event[data-kind='leader'] .eventBody,
+.dispatchCard,
+.reportCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
   border: 1px solid @border;
   border-radius: 12px;
 }
@@ -115,6 +120,10 @@
 .cardHeading,
 .dispatchHeading {
   justify-content: space-between;
+}
+
+.cardHeading {
+  gap: 4px 8px;
 }
 
 .heading h2 {
@@ -156,9 +165,8 @@
   line-height: 1.5;
 }
 
-.leaderText,
 .waiting {
-  margin: 8px 0 0;
+  margin: 0;
 }
 
 .leaderText,
@@ -177,14 +185,7 @@
   }
 }
 
-.dispatchCard,
-.reportCard {
-  border: 1px solid @border;
-  border-radius: 12px;
-}
-
 .dispatchCard { background: @light; }
-.dispatchCard > .cardHeading { min-height: 46px; }
 
 .dispatchHeadingTitle {
   display: flex;
@@ -201,13 +202,9 @@
   color: @secondary;
 }
 
-.dispatch,
-.cardHeading {
-  padding: 8px clamp(10px, 3%, 16px);
-}
-
-.dispatch + .dispatch,
-.cardHeading + * {
+.dispatch + .dispatch {
+  margin-block-start: 8px;
+  padding-block-start: 8px;
   border-top: 1px solid @border;
 }
 
@@ -224,7 +221,6 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 12px clamp(10px, 3%, 16px) 16px;
 }
 
 .dispatchTask {

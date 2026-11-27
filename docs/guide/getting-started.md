@@ -9,10 +9,10 @@ description: 安装 FinWork Kit 并接入对话组件。
 
 ## 安装
 
-请确认项目配置的 npm 源已提供 FinWork Kit，然后在应用项目中安装。以下命令使用该 npm 源的 `latest` 标签。
+请确认项目配置的 npm 源已提供 FinWork Kit `1.0.0-beta.2`，然后在应用项目中安装。
 
 ```bash
-pnpm add @lz19.02/finwork-kit
+pnpm add @lz19.02/finwork-kit@1.0.0-beta.2
 ```
 
 ## UI 依赖
@@ -100,7 +100,7 @@ export default function CustomAnswer() {
 
 | 现象 | 检查项 |
 | --- | --- |
-| 安装时报找不到包或版本 | 确认项目配置的 npm 源已发布该包，并设置了 `latest` 标签。使用本地构建产物时，将实际的 `.tgz` 路径传给 `pnpm add`。 |
+| 安装时报找不到包或版本 | 确认项目配置的 npm 源已发布所需版本。使用本地构建产物时，将实际的 `.tgz` 路径传给 `pnpm add`。 |
 | 无法解析导入 | 使用公开子路径导入。UI 导入 `@lz19.02/finwork-kit/chat/ui`，纯 SDK 导入对应 core 子路径。 |
 | 可渲染但没有样式或首次展开跳动 | 检查两份 CSS 是否从应用入口加载，且 Ant Design 主题先于 Kit 样式。 |
 | 流式正文只剩最后一段 | 传给组件的是累计内容。如果后端发 `text_delta`，先追加到旧正文或使用 SDK 归并。 |

@@ -1,6 +1,6 @@
 {
   "name": "@lz19.02/finwork-kit",
-  "version": "1.0.0-beta.1",
+  "version": "1.0.0-beta.2",
   "description": "Reusable FinWork capabilities",
   "type": "module",
   "packageManager": "pnpm@8.12.1",
