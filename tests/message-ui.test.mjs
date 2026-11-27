@@ -142,7 +142,7 @@ test('OPC preserves timeline order and supports reading without execution action
 
 test('only active thinking, tool calls and OPC statuses use the reduced-motion-aware shine', () => {
   assert.match(kitCss, /@media\s*\(prefers-reduced-motion:\s*no-preference\)[\s\S]*runningShine/);
-  assert.match(kitCss, /@supports\s*\(background-clip:\s*text\)[\s\S]*thinkShine/);
+  assert.match(kitCss, /@supports\s*\(\(-webkit-background-clip:\s*text\)\s*or\s*\(background-clip:\s*text\)\)[\s\S]*thinkShine/);
   assert.match(kitCss, /thinkDotsCycle/);
   assert.match(kitCss, /thinkShineSweep/);
   assert.match(kitCss, /@media\s*\(forced-colors:\s*active\)[\s\S]*CanvasText/);
@@ -985,4 +985,47 @@ test('OPC status iconOnly and upgraded timeline entries support new and legacy f
   assert.match(completedLeader, /执行过程/);
   assert.doesNotMatch(completedLeader, /已折叠步骤/);
   assert.match(completedLeader, /最终总结/);
+});
+
+test('OPC status background and running shine provide fallbacks without unprotected color-mix()', () => {
+  let stripped = '';
+  for (let i = 0; i < kitCss.length; i += 1) {
+    if (kitCss.startsWith('@supports', i)) {
+      const brace = kitCss.indexOf('{', i);
+      const condition = kitCss.slice(i, brace);
+      if (brace !== -1 && condition.includes('color-mix(')) {
+        let depth = 0;
+        let end = brace;
+        for (; end < kitCss.length; end += 1) {
+          if (kitCss[end] === '{') depth += 1;
+          else if (kitCss[end] === '}') {
+            depth -= 1;
+            if (depth === 0) break;
+          }
+        }
+        i = end;
+        continue;
+      }
+    }
+    stripped += kitCss[i];
+  }
+  assert.doesNotMatch(stripped, /color-mix\(/);
+
+  const shineBefore = kitCss.match(/\._runningShine_[^}]*?:{1,2}before\{[^}]*\}/);
+  assert.ok(shineBefore, 'Missing runningShine ::before rule');
+  assert.match(shineBefore[0], /opacity:\s*0?\.2\b/);
+  assert.doesNotMatch(shineBefore[0], /color-mix\(/);
+
+  assert.match(kitCss, /\._state_[^}]*:not\(\[data-status=idle\]\):not\(\[data-status=cancelled\]\)/);
+  const stateAfter = kitCss.match(/\._state_[^}]*:not\(\[data-status=idle\]\):not\(\[data-status=cancelled\]\):{1,2}after\{[^}]*\}/);
+  assert.ok(stateAfter, 'Missing OPC state ::after fallback background rule');
+  assert.match(stateAfter[0], /z-index:\s*-2\b/);
+  assert.match(stateAfter[0], /background:\s*var\(--state-tone\)/);
+  assert.match(stateAfter[0], /opacity:\s*0?\.1\b/);
+
+  assert.doesNotMatch(kitCss, /:is\(|:where\(|:dir\(/);
+  assert.doesNotMatch(kitCss, /:not\([^)]*,[^)]*\)/);
+  assert.doesNotMatch(kitCss, /@supports\s*\(\s*background-clip:\s*text\s*\)/);
+  assert.doesNotMatch(kitCss, /\b(?:inset|margin|padding)-(?:block|inline)(?:-(?:start|end))?\s*:/);
+  assert.doesNotMatch(kitCss, /[^{}]*:hover[^{}]*,[^{}]*:focus-visible|[^{}]*:focus-visible[^{}]*,[^{}]*:hover/);
 });

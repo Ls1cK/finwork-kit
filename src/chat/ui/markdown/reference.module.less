@@ -22,8 +22,7 @@
     background-color 0.15s ease;
 }
 
-.anchor:hover,
-.anchor:focus-visible {
+.anchor-highlight() {
   background: @primary-bg;
   color: @primary-hover;
   text-decoration: underline;
@@ -31,6 +30,14 @@
   text-underline-offset: 3px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
   transform: translateY(-1px);
+}
+
+.anchor:hover {
+  .anchor-highlight();
+}
+
+.anchor:focus-visible {
+  .anchor-highlight();
 }
 
 .anchor:active {
@@ -43,7 +50,8 @@
   outline-offset: 1px;
 }
 
-.popover :global(:is([class$="-popover-inner"], [class*="-popover-inner "])) {
+.popover :global([class$="-popover-inner"]),
+.popover :global([class*="-popover-inner "]) {
   border-radius: 10px;
   padding: 0;
   overflow: hidden;
@@ -51,7 +59,8 @@
 }
 
 .card {
-  width: min(340px, 85vw);
+  width: 340px;
+  max-width: 85vw;
   color: @text;
   background: @surface;
   display: flex;

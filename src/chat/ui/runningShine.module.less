@@ -4,6 +4,7 @@
 
 .thinkHeading {
   display: inline-block;
+  height: 1.5em;
   height: 1lh;
   vertical-align: top;
 }
@@ -30,9 +31,13 @@
 
     &::before {
       position: absolute;
-      inset: 0;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 0;
       z-index: -1;
-      background: linear-gradient(120deg, transparent 30%, color-mix(in srgb, @info 20%, transparent) 50%, transparent 70%);
+      background: linear-gradient(120deg, transparent 30%, @info 50%, transparent 70%);
+      opacity: 0.2;
       animation: runningShineSweep 2.8s linear infinite;
       pointer-events: none;
       content: '';
@@ -43,7 +48,7 @@
     animation: thinkDotsCycle @think-cycle-duration steps(1) infinite;
   }
 
-  @supports (background-clip: text) {
+  @supports ((-webkit-background-clip: text) or (background-clip: text)) {
     .thinkShine {
       background: linear-gradient(
           110deg,

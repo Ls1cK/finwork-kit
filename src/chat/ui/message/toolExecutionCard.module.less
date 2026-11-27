@@ -9,15 +9,26 @@
     margin-bottom: 0;
   }
 
-  :global(:is([class$="-collapse-header-text"], [class*="-collapse-header-text "])) {
+  :global([class$="-collapse-header-text"]),
+  :global([class*="-collapse-header-text "]) {
     min-width: 0;
   }
 
-  :global(:is([class$="-collapse-content"], [class*="-collapse-content "])) > :global(:is([class$="-collapse-content-box"], [class*="-collapse-content-box "])) {
-    padding: 8px 0 0;
+  :global([class$="-collapse-content"]),
+  :global([class*="-collapse-content "]) {
+    > :global([class$="-collapse-content-box"]),
+    > :global([class*="-collapse-content-box "]) {
+      padding: 8px 0 0;
+    }
   }
 
   &[data-failed] .label {
+    color: #a34142;
+  }
+}
+
+@supports (color: color-mix(in srgb, red 50%, white)) {
+  .card[data-failed] .label {
     color: color-mix(in srgb, @text 45%, @error);
   }
 }
@@ -73,6 +84,7 @@
     margin: 0;
     color: @text;
     font: 12px/1.6 ui-monospace, Menlo, Consolas, monospace;
+    overflow-wrap: break-word;
     overflow-wrap: anywhere;
     white-space: pre-wrap;
   }

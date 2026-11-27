@@ -4,6 +4,8 @@ import { libraryEntries, projectRoot } from './config/entries';
 
 export default defineConfig({
   build: {
+    target: 'chrome79',
+    cssTarget: 'chrome79',
     outDir: resolve(projectRoot, 'dist'),
     emptyOutDir: !process.argv.includes('--watch'),
     lib: {

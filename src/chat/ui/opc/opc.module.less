@@ -25,7 +25,13 @@
 
 .footer,
 .processingIcon {
-  margin-inline-start: calc(var(--event-icon-size) + var(--event-column-gap));
+  margin-left: calc(var(--event-icon-size) + var(--event-column-gap));
+}
+
+[dir='rtl'] .footer,
+[dir='rtl'] .processingIcon {
+  margin-left: 0;
+  margin-right: calc(var(--event-icon-size) + var(--event-column-gap));
 }
 
 .events,
@@ -52,12 +58,18 @@
 
   &:not(:last-child)::before {
     position: absolute;
-    inset-block: var(--marker-center) calc(0px - var(--event-gap) - var(--marker-center));
-    inset-inline-start: calc(var(--event-icon-size) / 2 - 1px);
+    top: var(--marker-center);
+    bottom: calc(0px - var(--event-gap) - var(--marker-center));
+    left: calc(var(--event-icon-size) / 2 - 1px);
     width: 2px;
     background: @border;
     content: '';
   }
+}
+
+[dir='rtl'] .event:not(:last-child)::before {
+  left: auto;
+  right: calc(var(--event-icon-size) / 2 - 1px);
 }
 
 .eventIcon {
@@ -65,7 +77,7 @@
   display: grid;
   width: var(--event-icon-size);
   height: var(--event-icon-size);
-  margin-block-start: 8px;
+  margin-top: 8px;
   place-items: center;
   border-radius: 50%;
   background: @surface;
@@ -75,18 +87,25 @@
 
 }
 
-.avatar:global(:is([class$="-avatar"], [class*="-avatar "])) {
-  flex: 0 0 auto;
-  background: @light;
-  color: @secondary;
+.avatar {
+  &:global([class$="-avatar"]),
+  &:global([class*="-avatar "]) {
+    flex: 0 0 auto;
+    background: @light;
+    color: @secondary;
+  }
 }
 
-.eventIcon .avatar:global(:is([class$="-avatar"], [class*="-avatar "])) {
-  background: transparent;
+.eventIcon .avatar {
+  &:global([class$="-avatar"]),
+  &:global([class*="-avatar "]) {
+    background: transparent;
+  }
 }
 
 .eventBody {
   min-width: 0;
+  overflow-wrap: break-word;
   overflow-wrap: anywhere;
 }
 
@@ -138,7 +157,8 @@
   display: inline-flex;
   align-items: center;
   min-height: 20px;
-  padding-inline: 8px;
+  padding-left: 8px;
+  padding-right: 8px;
   border-radius: 12px;
   background: @light;
   color: @secondary;
@@ -150,8 +170,16 @@
 
 .event[data-kind='leader'] .eventRole,
 .event[data-kind='dispatch'] .eventRole {
-  background: color-mix(in srgb, @purple 12%, transparent);
-  color: color-mix(in srgb, @text 55%, @purple);
+  background: rgba(215, 92, 255, 0.12);
+  color: #7d468f;
+}
+
+@supports (color: color-mix(in srgb, red 50%, white)) {
+  .event[data-kind='leader'] .eventRole,
+  .event[data-kind='dispatch'] .eventRole {
+    background: color-mix(in srgb, @purple 12%, transparent);
+    color: color-mix(in srgb, @text 55%, @purple);
+  }
 }
 
 .leaderProcessCollapse {
@@ -171,8 +199,8 @@
 
 .leaderText,
 .reportBody {
-  > div > :first-child { margin-block-start: 0; }
-  > div > :last-child { margin-block-end: 0; }
+  > div > :first-child { margin-top: 0; }
+  > div > :last-child { margin-bottom: 0; }
 }
 
 .leaderText,
@@ -203,8 +231,8 @@
 }
 
 .dispatch + .dispatch {
-  margin-block-start: 8px;
-  padding-block-start: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
   border-top: 1px solid @border;
 }
 
@@ -229,7 +257,8 @@
     align-items: flex-start;
     gap: 8px;
     min-height: 28px;
-    padding-block: 4px;
+    padding-top: 4px;
+    padding-bottom: 4px;
     border-radius: 6px;
     list-style: none;
     cursor: pointer;
@@ -239,6 +268,7 @@
 
   &[open] .promptText {
     white-space: pre-wrap;
+    overflow-wrap: break-word;
     overflow-wrap: anywhere;
     color: @text;
   }
@@ -250,7 +280,7 @@
   display: flex;
   flex: 0 0 24px;
   justify-content: center;
-  margin-block-start: 4px;
+  margin-top: 4px;
   color: @secondary;
   font-size: 12px;
 
@@ -270,6 +300,9 @@
 .state {
   --state-color: @secondary;
   --state-background: @light;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -283,21 +316,54 @@
   line-height: 1.5;
 
   &[data-status='running'],
-  &[data-status='started'] { --state-tone: @info; }
-  &[data-status='success'],
-  &[data-status='completed'] { --state-tone: @success; }
-  &[data-status='error'] { --state-tone: @error; }
-  &[data-status='timeout'],
-  &[data-status='uncompleted'] { --state-tone: @warning; }
+  &[data-status='started'] {
+    --state-tone: @info;
+    --state-color: @info;
+  }
 
-  &[data-status]:not([data-status='idle'], [data-status='cancelled']) {
-    --state-color: color-mix(in srgb, @text 60%, var(--state-tone));
-    --state-background: color-mix(in srgb, @surface 90%, var(--state-tone));
+  &[data-status='success'],
+  &[data-status='completed'] {
+    --state-tone: @success;
+    --state-color: #4a6b36;
+  }
+
+  &[data-status='error'] {
+    --state-tone: @error;
+    --state-color: #853d3e;
+  }
+
+  &[data-status='timeout'],
+  &[data-status='uncompleted'] {
+    --state-tone: @warning;
+    --state-color: #7c6430;
+  }
+
+  &[data-status]:not([data-status='idle']):not([data-status='cancelled']) {
+    --state-background: @surface;
+
+    &::after {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      z-index: -2;
+      background: var(--state-tone);
+      opacity: 0.1;
+      pointer-events: none;
+      content: '';
+    }
   }
 
   > span[role='img'] {
     flex-shrink: 0;
     font-size: 13px;
+  }
+}
+
+@supports (color: color-mix(in srgb, red 50%, white)) {
+  .state[data-status]:not([data-status='idle']):not([data-status='cancelled']) {
+    --state-color: color-mix(in srgb, @text 60%, var(--state-tone));
   }
 }
 
@@ -315,6 +381,7 @@
 
 .stateLabel {
   min-width: 0;
+  overflow-wrap: break-word;
   overflow-wrap: anywhere;
 }
 
@@ -325,12 +392,12 @@
 
 @media (hover: hover) {
   .stateAction:hover {
-    background: color-mix(in srgb, var(--state-background) 96%, @text);
+    box-shadow: inset 0 0 0 100px rgba(0, 0, 0, 0.04);
 
     &:not(.stateActionIconOnly) {
       .stateLabel { text-decoration: underline; }
       .stateArrow { transform: translateX(1.5px); }
-      &:dir(rtl) .stateArrow { transform: translateX(-1.5px); }
+      [dir='rtl'] & .stateArrow { transform: translateX(-1.5px); }
     }
   }
 }
@@ -344,6 +411,7 @@
 .error {
   margin: 0;
   color: @error;
+  overflow-wrap: break-word;
   overflow-wrap: anywhere;
 }
 
@@ -386,9 +454,13 @@
   font-weight: 600;
 }
 
-.expertSelect:global(:is([class$="-select"], [class*="-select "])) {
-  min-width: 0;
-  max-width: min(280px, 100%);
+.expertSelect {
+  &:global([class$="-select"]),
+  &:global([class*="-select "]) {
+    min-width: 0;
+    max-width: 280px;
+    max-width: min(280px, 100%);
+  }
 }
 
 .taskBar {
@@ -399,10 +471,13 @@
   border-bottom: 1px solid @border;
 }
 
-.taskSelect:global(:is([class$="-select"], [class*="-select "])) {
-  flex: 1 1 160px;
-  min-width: 0;
-  font-weight: 600;
+.taskSelect {
+  &:global([class$="-select"]),
+  &:global([class*="-select "]) {
+    flex: 1 1 160px;
+    min-width: 0;
+    font-weight: 600;
+  }
 }
 
 .taskNumber {
@@ -419,8 +494,11 @@
   white-space: nowrap;
 }
 
-.taskMenu:global(:is([class$="-select-dropdown"], [class*="-select-dropdown "])) {
-  max-width: calc(100vw - 32px);
+.taskMenu {
+  &:global([class$="-select-dropdown"]),
+  &:global([class*="-select-dropdown "]) {
+    max-width: calc(100vw - 32px);
+  }
 }
 
 .taskMenuItem {
@@ -436,6 +514,7 @@
   overflow: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
+  overflow-wrap: break-word;
   overflow-wrap: anywhere;
 }
 
@@ -447,7 +526,10 @@
 }
 
 @media (pointer: coarse) {
-  .dispatchTask summary { padding-block: 12px; }
+  .dispatchTask summary {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
   .stateAction { min-height: 44px; }
 }
 
