@@ -1,7 +1,8 @@
+import { CodeOutlined } from '@ant-design/icons';
 import {
   AssistantContent, AskUserQuestionContent, ContextCompressContent,
   MessageCollapse, MessageContentItem, MessageContentList, TaskCompletedSplit,
-  ThinkContent, ToolCallMsg, ToolCallResponse,
+  ThinkContent, ToolCallMsg, ToolCallResponse, ToolExecutionCard,
 } from '@lz19.02/finwork-kit/chat/ui';
 import '@lz19.02/finwork-kit/chat/style.css';
 
@@ -12,9 +13,9 @@ export default function MessageContents() {
       <MessageContentList streamingAssistantContentId="mcp" list={[
         { id: 'think', type: 'THINK_MSG', content: '核对资料并整理重点。' },
         { id: 'mcp', type: 'TOOL_CALL', tool_call_name: 'mcp__documents__search' },
-        { id: 'tool', type: 'TOOL_CALL', tool_call_name: 'BASH', state: 'success',
-          delta: { command: 'cat /workspace/meeting-notes.md' }, output: '找到 3 条相关记录。' },
-        { id: 'result', type: 'TOOL_RESPONSE', tool_result_name: 'Bash', output: '找到 3 条相关记录。' },
+        { id: 'tool', type: 'TOOL_CALL', tool_call_name: 'BASH', state: 'completed',
+          inputComplete: true, responseReceived: true, returncode: 0,
+          input: { command: 'cat /workspace/meeting-notes.md' }, output: '找到 3 条相关记录。' },
         { id: 'agents', type: 'SUBAGENTS', subAgentRenderConfig: { subAgentList: [
           { id: 'summary-agent', description: '纪要助手', prompt: '整理会议纪要中的行动项。' },
         ] } },
@@ -29,7 +30,17 @@ export default function MessageContents() {
       <AssistantContent content="已生成 **3 项待办**。" />
       <h3>ThinkContent · 思考内容</h3>
       <ThinkContent content="先提取会议中的行动项。" defaultExpanded />
-      <h3>ToolCallMsg · 工具调用</h3>
+      <h3>ToolExecutionCard · 工具执行卡片</h3>
+      <ToolExecutionCard
+        icon={<CodeOutlined />}
+        label="命令执行完成"
+        preview="cat /workspace/meeting-notes.md"
+        details={[
+          { label: 'command', value: 'cat /workspace/meeting-notes.md' },
+          { label: 'output', value: '找到 3 条相关记录。' },
+        ]}
+      />
+      <h3>ToolCallMsg · 工具调用（兼容导出）</h3>
       <ToolCallMsg label="搜索资料" detail="会议纪要" isStreaming />
       <ToolCallMsg label="搜索资料" detail="已找到 3 条相关记录" />
       <h3>ToolCallResponse · 工具结果</h3>

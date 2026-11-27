@@ -2,6 +2,7 @@ import {
   lastIndex, readAnswerMetadata, readQuestionUpdate, readUserAnswerUpdate, sameFields, toolName,
   type PendingQuestion, type QuestionAnswer,
 } from './answer.js';
+import { getCommandToolName } from './commandTool.js';
 import { getLifecycle } from './decode.js';
 import {
   asRecord, isRoundTerminalStatus, readCompletion, readId, readNumber, readString, readSuggestedQuestions, readUsage,
@@ -38,9 +39,12 @@ export interface OrdinaryBlock extends CoreContentBlock {
   readonly input?: unknown;
   readonly output?: string;
   readonly state?: string;
+  readonly error?: string;
   readonly stdout?: string;
   readonly stderr?: string;
   readonly returncode?: number | string;
+  readonly inputComplete?: true;
+  readonly responseReceived?: true;
   readonly contextCompressStatus?: 'unfinished' | 'success' | 'failed';
   readonly message?: string;
   readonly question?: string;
@@ -74,7 +78,8 @@ function readToolFields(frame: WireFrame) {
     ...defined('delta', asRecord(frame.delta)),
     ...defined('input', frame.input),
     ...defined('output', readString(frame.output)),
-    ...defined('state', readString(frame.state)),
+    ...defined('state', readString(frame.state) ?? readString(frame.status)),
+    ...defined('error', readString(frame.error)),
     ...defined('stdout', readString(frame.stdout)),
     ...defined('stderr', readString(frame.stderr)),
     ...defined('returncode', returncode),
@@ -113,9 +118,12 @@ function updateSubAgent<T extends CoreContentBlock>(
     (source === 'history' || member.creating || member.excuting);
   const { type: blockType, phase } = getLifecycle(type);
   const ownsBlock = (group: SubAgentGroup, member: OrdinarySubAgent) => {
-    if (!memberId || completing || phase === 'START' || !matchesMember(member)) return false;
+    const matchId = type === 'TOOL_RESPONSE' ? (readId(frame.tool_call_id) ?? memberId) : memberId;
+    if (!matchId || completing || phase === 'START' || !matchesMember(member)) return false;
     const inner = group.subAgentContents[member.id];
-    return !!inner?.contentList.some((block) => block.type === blockType && block.sourceId === memberId);
+    const targetType = type === 'TOOL_RESPONSE' ? 'TOOL_CALL' : blockType;
+    return !!inner?.contentList.some((block) =>
+      block.type === targetType && (block.sourceId === matchId || block.tool_call_id === matchId));
   };
   let groupIndex = -1;
   if (creating) {
@@ -222,7 +230,65 @@ export function reduceOrdinaryRound<T extends CoreContentBlock = never>(
   const nextId = (type: string, sourceId?: string) =>
     JSON.stringify([state.roundKey, type, sourceId ?? null, state.contentList.length]);
 
-  const mergeContent = ({ frame, source, text }: FrameEvent) => {
+  const mergeCommandFrame = ({ frame, source }: FrameEvent): boolean => {
+    if (frame.type !== 'TOOL_CALL_END' && frame.type !== 'TOOL_RESPONSE') return false;
+    const isResponse = frame.type === 'TOOL_RESPONSE';
+    const targetId = isResponse
+      ? (readId(frame.tool_call_id) ?? readId(frame.id))
+      : (readId(frame.id) ?? readId(frame.tool_call_id));
+    if (!targetId) return false;
+    const index = lastIndex(
+      state.contentList,
+      (item: OrdinaryBlock) =>
+        item.type === 'TOOL_CALL' &&
+        (item.sourceId === targetId || item.tool_call_id === targetId || item.id === targetId),
+    );
+    const previous = index >= 0 ? (state.contentList[index] as OrdinaryBlock) : undefined;
+    const name = getCommandToolName(previous?.tool_call_name ?? frame.tool_call_name ?? frame.tool_result_name);
+    if (!name) return false;
+    if (isResponse && !previous) return true;
+
+    const frameId = readId(frame.id);
+    const id = previous?.id ?? nextId('TOOL_CALL', targetId);
+    const returncode = readNumber(frame.returncode) ?? readString(frame.returncode) ?? previous?.returncode;
+    const block: OrdinaryBlock = {
+      ...previous,
+      id,
+      type: 'TOOL_CALL',
+      sourceId: previous?.sourceId ?? frameId ?? targetId,
+      ...defined('lifecycleManaged', previous?.lifecycleManaged ?? (!isResponse ? (true as const) : undefined)),
+      ...defined('name', previous?.name ?? readId(frame.name)),
+      tool_call_name: name,
+      ...defined('tool_call_id', previous?.tool_call_id ?? readId(frame.tool_call_id)),
+      ...defined('delta', isResponse ? previous?.delta : (asRecord(frame.delta) ?? previous?.delta)),
+      ...defined('input', isResponse ? previous?.input : (frame.input !== undefined ? frame.input : previous?.input)),
+      ...defined('output', readString(frame.output) ?? previous?.output),
+      ...defined('stdout', readString(frame.stdout) ?? previous?.stdout),
+      ...defined('stderr', readString(frame.stderr) ?? previous?.stderr),
+      ...defined('returncode', returncode),
+      ...defined('state', readString(frame.state) ?? readString(frame.status) ?? previous?.state),
+      ...defined('error', readString(frame.error) ?? previous?.error),
+      inputComplete: true,
+      ...defined('responseReceived', isResponse ? (true as const) : previous?.responseReceived),
+    };
+    writeBlock(block, index);
+
+    if (!isResponse) {
+      for (const candidate of [frameId, previous?.sourceId, targetId]) {
+        const key = JSON.stringify(['TOOL_CALL', candidate ?? null]);
+        if (state.lifecycle[key]) delete lifecycle()[key];
+      }
+      if (source === 'stream' && state.activeContentId === id) {
+        const activeIds = Object.values(state.lifecycle);
+        activate(activeIds[activeIds.length - 1]);
+      }
+    }
+    return true;
+  };
+
+  const mergeContent = (event: FrameEvent) => {
+    if (mergeCommandFrame(event)) return;
+    const { frame, source, text } = event;
     const { type, phase } = getLifecycle(frame.type);
     const sourceId = readId(frame.id);
     const lifecycleKey = JSON.stringify([type, sourceId ?? null]);

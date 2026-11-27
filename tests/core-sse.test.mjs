@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { loadCore } from './helpers/load-core.mjs';
 
-const { createRound, decodeFrame, reduceRound, reduceStreamBatch } = await loadCore('core-sse');
+const { createRound, decodeFrame, getCommandToolName, reduceRound, reduceStreamBatch } = await loadCore('core-sse');
 
 const createOrdinary = () => createRound({ roundKey: 'round', kind: 'ordinary' });
 
@@ -124,22 +124,56 @@ test('legacy snapshots never replace open or completed lifecycle blocks', () => 
   }
 });
 
-test('tool snapshots replace payloads and interleaved tool IDs stay separate', () => {
+test('tool snapshots replace payloads, command tools merge responses, and non-command tools stay separate', () => {
+  assert.equal(getCommandToolName('bash'), 'BASH');
+  assert.equal(getCommandToolName('Execute_Shell_Command'), 'EXECUTE_SHELL_COMMAND');
+  assert.equal(getCommandToolName('EXECUTE_PYTHON_CODE'), 'EXECUTE_PYTHON_CODE');
+  assert.equal(getCommandToolName('READ_FILE'), undefined);
+  assert.equal(getCommandToolName(null), undefined);
+
   const events = frames([
     { type: 'TOOL_CALL_START', id: 'first', tool_call_name: 'bash' },
     { type: 'TOOL_CALL_START', id: 'second', tool_call_name: 'mcp__read' },
-    { type: 'TOOL_CALL', id: 'first', delta: { a: 'old', discard: true } },
-    { type: 'TOOL_CALL', id: 'first', delta: { a: 'new' } },
+    { type: 'TOOL_CALL', id: 'first', delta: { command: 'old', discard: true } },
+    { type: 'TOOL_CALL', id: 'first', delta: { command: 'echo ok' } },
     { type: 'TOOL_CALL_END', id: 'second' },
-    { type: 'TOOL_CALL_END', id: 'first' },
-    { type: 'TOOL_RESPONSE', id: 'first', output: 'done' },
+    { type: 'TOOL_CALL_END', id: 'first', input: { command: 'echo ok' } },
+    { type: 'TOOL_RESPONSE', id: 'resp-1', tool_call_id: 'first', output: 'done', stdout: 'ok', returncode: 0, state: 'completed' },
+    { type: 'TOOL_RESPONSE', id: 'orphan-cmd', tool_result_name: 'Bash', output: 'ignored' },
+    { type: 'TOOL_RESPONSE', id: 'second-resp', tool_result_name: 'READ_FILE', output: 'file body' },
   ]);
   const result = reduceRound(createOrdinary(), events).state;
   assert.deepEqual(result.contentList.map(({ type }) => type), ['TOOL_CALL', 'TOOL_CALL', 'TOOL_RESPONSE']);
-  assert.deepEqual(result.contentList[0].delta, { a: 'new' });
+  assert.deepEqual(result.contentList[0].delta, { command: 'echo ok' });
+  assert.deepEqual(result.contentList[0].input, { command: 'echo ok' });
   assert.equal(result.contentList[0].tool_call_name, 'BASH');
+  assert.equal(result.contentList[0].output, 'done');
+  assert.equal(result.contentList[0].stdout, 'ok');
+  assert.equal(result.contentList[0].returncode, 0);
+  assert.equal(result.contentList[0].state, 'completed');
+  assert.equal(result.contentList[0].inputComplete, true);
+  assert.equal(result.contentList[0].responseReceived, true);
   assert.equal(result.contentList[1].tool_call_name, 'mcp__read');
-  assert.equal(result.contentList[2].output, 'done');
+  assert.equal(result.contentList[2].output, 'file body');
+  assert.deepEqual(result.lifecycle, {});
+});
+
+test('subagent command tools inherit lifecycle merging across same-name subagents', () => {
+  const result = reduceRound(createOrdinary(), frames([
+    { type: 'SUBAGENT_CREATE', id: 'agent-1', delta: { agent_name: 'Runner' } },
+    { type: 'SUBAGENT_CREATE', id: 'agent-2', delta: { agent_name: 'Runner' } },
+    { type: 'SUBAGENT_TOOL_CALL_START', id: 'cmd-1', name: 'Runner', tool_call_name: 'execute_python_code' },
+    { type: 'SUBAGENT_TOOL_CALL_END', id: 'cmd-1', name: 'Runner', input: { code: 'print(1)' } },
+    { type: 'SUBAGENT_TOOL_RESPONSE', id: 'resp-1', tool_call_id: 'cmd-1', name: 'Runner', output: '1', returncode: '0' },
+  ])).state;
+  const subContents = result.contentList[0].subAgentRenderConfig.subAgentContents;
+  assert.equal(subContents['agent-1'].contentList.length, 1);
+  assert.equal(subContents['agent-1'].contentList[0].tool_call_name, 'EXECUTE_PYTHON_CODE');
+  assert.equal(subContents['agent-1'].contentList[0].inputComplete, true);
+  assert.equal(subContents['agent-1'].contentList[0].responseReceived, true);
+  assert.equal(subContents['agent-1'].contentList[0].output, '1');
+  assert.equal(subContents['agent-1'].contentList[0].returncode, '0');
+  assert.equal(subContents['agent-2'].contentList.length, 0);
 });
 
 test('metadata, question answers and browser intents stay independent of completion', () => {

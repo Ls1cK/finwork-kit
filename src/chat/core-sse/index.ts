@@ -6,8 +6,12 @@ import type {
 } from './types.js';
 
 export { decodeFrame };
-export { resolveOpcExecution } from './opc.js';
-export type { OpcRoundState, OpcReply, OpcAssignment, OpcBlock, OpcExecutionTarget, OpcTimelineItem } from './opc.js';
+export { getCommandToolName } from './commandTool.js';
+export type { CommandToolName } from './commandTool.js';
+export { groupOpcTimeline, isOpcBlockStreaming, resolveOpcExecution } from './opc.js';
+export type {
+  OpcRoundState, OpcReply, OpcAssignment, OpcBlock, OpcExecutionTarget, OpcTimelineItem, OpcGroupedTimelineEntry,
+} from './opc.js';
 export type { AnswerMetadata, AnswerQuestionBlock, OrdinaryReference, PendingQuestion } from './answer.js';
 export type { OrdinaryRoundState, OrdinaryBlock, OrdinarySubAgent } from './ordinary.js';
 export type {

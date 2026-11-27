@@ -7,7 +7,7 @@ description: 内容分发、正文、思考、工具调用和折叠面板。
 
 使用 `MessageContentList` 按类型展示内容，也可以直接组合各内容组件。
 
-以下示例展示全部七种内置内容类型，以及各内容组件的独立用法。工具调用组件导出名为 `ToolCallMsg`，对应内容类型 `TOOL_CALL`；工具结果使用 `ToolCallResponse`。子智能体组件的独立用法见[子智能体](/reference/subagents)。
+以下示例展示全部七种内置内容类型，以及各内容组件的独立用法。内置 `TOOL_CALL` / `TOOL_RESPONSE` 使用轻量化可折叠卡片 `ToolExecutionCard` 展示（命令工具在流式与历史阶段自动合并结果）；旧版 `ToolCallMsg` 与 `ToolCallResponse` 仍保留导出以保持兼容。子智能体组件的独立用法见[子智能体](/reference/subagents)。
 
 <code src="../examples/message-content.tsx"></code>
 
@@ -37,8 +37,10 @@ description: 内容分发、正文、思考、工具调用和折叠面板。
 | content | `string` | 否 | 回答或思考正文 |
 | input | `unknown` | 否 | 工具调用参数，传入时在 `TOOL_CALL` 下默认展开展示 |
 | output | `unknown` | 否 | 工具执行结果，`TOOL_CALL` 下默认收起展示，`TOOL_RESPONSE` 支持字符串结果 |
-| delta | `Readonly<Record<string, unknown>>` | 否 | 工具流式参数。Bash 缺少 `input` 时用字符串 `command`，字符串 `file_path` 显示为文件名 |
-| state | `string` | 否 | 工具调用状态，非流式且非 `'success'` 时标记异常状态 |
+| delta | `Readonly<Record<string, unknown>>` | 否 | 工具流式参数。命令工具缺少 `input` 时读取 `command`/`code`，字符串 `file_path` 显示为单行预览 |
+| state | `string` | 否 | 工具调用状态，非流式且非 `'success'`/`'completed'` 时标记异常状态 |
+| error / stdout / stderr / returncode | `string` / `number \| string` | 否 | 命令工具执行结果、标准输出/错误与退出码（非零数字视为失败） |
+| inputComplete / responseReceived / inputEnded | `boolean` | 否 | 命令工具生命周期标记，分别控制「正在输入参数」「等待执行结果」「执行完成/失败」文案 |
 | tool_call_name / tool_result_name | `string` | 否 | 工具调用名称 / 结果名称 |
 | contextCompressStatus | `'unfinished' \| 'success' \| 'failed'` | 否 | 上下文压缩状态 |
 | question | `string` | 否 | 提问内容 |
@@ -68,7 +70,21 @@ description: 内容分发、正文、思考、工具调用和折叠面板。
 
 `MessageTextRenderer` 为 `(content: string, isStreaming: boolean) => ReactNode`。`MessageContentRenderers<T>` 为按类型名索引的可选渲染函数集合，每个函数接收 `MessageContentItemRenderProps<T>`，即上表中除 `renderers`、`renderUnknown` 外的属性。
 
-默认支持 `THINK_MSG`、`ASSISTANT_MSG`、`TOOL_CALL`、`TOOL_RESPONSE`、`SUBAGENTS`、`CONTEXT_COMPRESS` 和 `ASK_USER_QUESTION`。`TOOL_CALL` 用代码块展示 `input` / `output`，Bash 缺少 `input` 时可展示 `delta.command`。`delta.file_path` 在卡片上显示文件名。MCP 工具显示服务名、工具名和调用状态。其他工具文案可通过 `renderers` 定制。`TOOL_RESPONSE` 默认展示 `tool_result_name === 'Bash'` 的字符串结果。
+默认支持 `THINK_MSG`、`ASSISTANT_MSG`、`TOOL_CALL`、`TOOL_RESPONSE`、`SUBAGENTS`、`CONTEXT_COMPRESS` 和 `ASK_USER_QUESTION`。命令工具（`BASH`、`EXECUTE_SHELL_COMMAND`、`EXECUTE_PYTHON_CODE`）使用 `ToolExecutionCard` 展示参数输入、等待结果、完成与失败详情；MCP 工具显示服务名、工具名和调用状态；其他工具回退为通用 `ToolExecutionCard`，业务图标与中文文案可通过 `renderers` 定制。
+
+### ToolExecutionCard
+
+支持共用展开属性（`expanded`、`defaultExpanded`、`onExpandedChange`）。
+
+| 属性 | 类型 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| icon | `ReactNode` | 必填 | 头部左侧图标 |
+| label | `ReactNode` | 必填 | 头部主标题 |
+| preview | `string` | — | 头部单行摘要，自动取首行并截断至 120 字符 |
+| isRunning | `boolean` | `false` | 运行中对标题启用文字扫光 |
+| failed | `boolean` | `false` | 失败态标记 `data-failed` 并着色标题 |
+| details | `readonly { label: string; value: unknown }[]` | 必填 | 展开区详情列表；均为空时显示 `/` 占位 |
+| onCopy | `(text: string) => void \| Promise<void>` | 浏览器剪贴板及兼容回退 | 接管单项详情复制动作 |
 
 ### MessageContentList
 
@@ -108,7 +124,7 @@ description: 内容分发、正文、思考、工具调用和折叠面板。
 | title | `ReactNode` | 按流式状态生成 | 默认“正在思考中...”或“已完成思考” |
 | renderContent | `MessageTextRenderer` | — | 替换思考正文渲染 |
 
-### ToolCallMsg
+### ToolCallMsg（兼容导出）
 
 | 属性 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
@@ -119,7 +135,7 @@ description: 内容分发、正文、思考、工具调用和折叠面板。
 | icon | `ReactNode` | 按流式状态生成 | 自定义状态图标 |
 | children | `ReactNode` | — | 状态卡片后的内容（如参数与输出代码块） |
 
-### ToolCallResponse
+### ToolCallResponse（兼容导出）
 
 支持共用展开属性。
 

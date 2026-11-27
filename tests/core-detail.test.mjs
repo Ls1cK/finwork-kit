@@ -187,8 +187,8 @@ test('history identifies OPC only from a valid member start and replays the same
   assert.deepEqual(restored.issues, []);
   const state = restored.rounds[0].state;
   assert.deepEqual(state, applyStream('r', 'opc', frames));
-  assert.deepEqual(state.timeline.map((entry) => entry.kind), ['leader', 'dispatch', 'report']);
-  const [assignmentId] = state.timeline[1].assignmentIds;
+  assert.deepEqual(state.timeline.map((entry) => entry.kind), ['leader', 'leader', 'dispatch', 'report']);
+  const [assignmentId] = state.timeline[2].assignmentIds;
   const execution = resolveOpcExecution(state, { kind: 'assignment', id: assignmentId });
   assert.equal(execution?.assignment?.result?.text, 'Done');
   assert.equal(execution?.reply?.blocks[0]?.content, 'Done');

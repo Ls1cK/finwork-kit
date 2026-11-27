@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { loadCore } from './helpers/load-core.mjs';
 
-const { createRound, decodeFrame, reduceRound, resolveOpcExecution } = await loadCore('core-sse');
+const {
+  createRound, decodeFrame, groupOpcTimeline, isOpcBlockStreaming, reduceRound, resolveOpcExecution,
+} = await loadCore('core-sse');
 const createOpc = () => createRound({ roundKey: 'round', kind: 'opc' });
 const frame = (type, fields = {}, runId = 'run') => ({ type, opc: { run_id: runId }, ...fields });
 const member = (type, replyId, role, fields = {}, agentId = role) => frame(type, {
@@ -27,8 +29,12 @@ test('OPC keeps repeated dispatches and reports for the same expert distinct', (
     assign('a', 'first'),
     assign('b', 'second'),
   );
-  const [dispatch] = directed.timeline;
+  const groupedDirected = groupOpcTimeline(directed);
+  assert.equal(groupedDirected[0].kind, 'leader');
+  assert.equal(groupedDirected[0].content.length, 2);
+  const dispatch = groupedDirected[1];
   assert.equal(dispatch.kind, 'dispatch');
+  assert.equal(dispatch.reply?.id, 'leader');
   const [a, b] = dispatch.assignmentIds;
   const linked = apply(directed,
     member('OPC_AGENT_REPLY_START', '__proto__', 'worker', { created_at: '2026-11-22T13:23:00.123456' }),
@@ -40,8 +46,10 @@ test('OPC keeps repeated dispatches and reports for the same expert distinct', (
     member('TOOL_RESPONSE', 'leader', 'leader', { id: 'b', output: 'submitted second', state: 'success' }),
   );
   assert.equal(directed.assignments[a].replyId, undefined);
-  assert.equal(linked.timeline[0], dispatch);
-  assert.deepEqual(linked.timeline.slice(1).map((entry) => entry.replyId), ['worker-2', '__proto__']);
+  assert.deepEqual(
+    linked.timeline.filter((entry) => entry.kind === 'report').map((entry) => entry.replyId),
+    ['__proto__', 'worker-2'],
+  );
   const first = resolveOpcExecution(linked, { kind: 'assignment', id: a });
   const second = resolveOpcExecution(linked, { kind: 'reply', id: 'worker-2' });
   assert.equal(first.reply.id, '__proto__');
@@ -96,11 +104,12 @@ test('OPC text prefers snapshots and ignores competing runs and duplicate lifecy
   ), after);
 });
 
-test('OPC closes an interrupted input without creating a worker report', () => {
+test('OPC closes an interrupted input without creating a blank worker report', () => {
   const team = apply(createOpc(),
     member('OPC_AGENT_REPLY_START', 'worker-1', 'worker'),
-    member('WORKER_ASSISTANT_MSG', 'worker-1', 'worker', { id: 'pending', content: 'partial' }),
+    member('WORKER_ASSISTANT_MSG', 'worker-1', 'worker', { id: 'pending', content: '   ' }),
   );
+  assert.equal(team.timeline.length, 0);
   const stopped = reduceRound(team, [{ kind: 'input.end', reason: 'cancelled' }]).state;
   assert.equal(stopped.status, 'cancelled');
   assert.equal(stopped.replies['worker-1'].status, 'cancelled');
@@ -108,6 +117,43 @@ test('OPC closes an interrupted input without creating a worker report', () => {
   assert.equal(stopped.timeline, team.timeline);
   assert.equal(stopped.completion, undefined);
   assert.equal(apply(stopped, frame('TASK_COMPLETED', { status: 'success' })), stopped);
+});
+
+test('OPC separates delta/input, matches TEAMASSIGN case-insensitively, merges tool_call_id responses and groups leader blocks', () => {
+  const state = apply(createOpc(),
+    member('OPC_AGENT_REPLY_START', 'leader', 'leader', { name: '团长' }),
+    member('THINK_MSG_END', 'leader', 'leader', { id: 't1', content: '先分析' }),
+    member('TOOL_CALL_START', 'leader', 'leader', { id: 'cmd1', tool_call_name: 'bash' }),
+    member('TOOL_CALL', 'leader', 'leader', { id: 'cmd1', delta: { command: 'ls' } }),
+    member('TOOL_CALL_END', 'leader', 'leader', { id: 'cmd1', input: { command: 'ls -la' } }),
+    member('TOOL_RESPONSE', 'leader', 'leader', { id: 'resp-cmd1', tool_call_id: 'cmd1', output: 'ok', stdout: 'a.txt', returncode: 0 }),
+    member('ASSISTANT_MSG_END', 'leader', 'leader', { id: 'a1', content: '准备派发' }),
+    member('TOOL_CALL_END', 'leader', 'leader', { id: 'd1', tool_call_name: 'TEAMASSIGN', input: { member: 'worker', prompt: '执行' } }),
+    member('TOOL_CALL_END', 'leader', 'leader', { id: 't2', tool_call_name: 'READ_FILE', input: { file_path: 'b.txt' }, state: 'success' }),
+    member('ASSISTANT_MSG_END', 'leader', 'leader', { id: 'a2', content: '汇总结果' }),
+    member('ASSISTANT_MSG_END', 'leader', 'leader', { id: 'blank', content: '   ' }),
+  );
+
+  const cmdBlock = state.replies.leader.blocks.find((block) => block.sourceId === 'cmd1');
+  assert.deepEqual(cmdBlock.delta, { command: 'ls' });
+  assert.deepEqual(cmdBlock.input, { command: 'ls -la' });
+  assert.equal(cmdBlock.inputEnded, true);
+  assert.equal(cmdBlock.inputComplete, true);
+  assert.equal(cmdBlock.responseReceived, true);
+  assert.equal(cmdBlock.stdout, 'a.txt');
+  assert.equal(cmdBlock.returncode, 0);
+  assert.equal(isOpcBlockStreaming(cmdBlock), false);
+
+  const assignBlock = state.replies.leader.blocks.find((block) => block.sourceId === 'd1');
+  assert.equal(assignBlock.state, 'success');
+  assert.equal(Object.keys(state.assignments).length, 1);
+
+  const grouped = groupOpcTimeline(state);
+  assert.deepEqual(grouped.map((entry) => entry.kind), ['leader', 'dispatch', 'leader']);
+  assert.equal(grouped[0].content.length, 4);
+  assert.equal(grouped[1].reply?.id, 'leader');
+  assert.equal(grouped[2].content.length, 2);
+  assert.equal(grouped[2].content[1].content, '汇总结果');
 });
 
 test('OPC applies the last valid completion frame, ignores invalid ones, and preserves state on identical repeats', () => {

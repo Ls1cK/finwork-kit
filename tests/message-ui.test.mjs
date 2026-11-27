@@ -142,7 +142,7 @@ test('OPC preserves timeline order and supports reading without execution action
 
 test('only active thinking, tool calls and OPC statuses use the reduced-motion-aware shine', () => {
   assert.match(kitCss, /@media\s*\(prefers-reduced-motion:\s*no-preference\)[\s\S]*runningShine/);
-  assert.match(kitCss, /@supports\s*\(background-clip:\s*text\)\s*and\s*\(color:\s*color-mix\([^)]+\)\)[\s\S]*thinkShine/);
+  assert.match(kitCss, /@supports\s*\(background-clip:\s*text\)[\s\S]*thinkShine/);
   assert.match(kitCss, /thinkDotsCycle/);
   assert.match(kitCss, /thinkShineSweep/);
   assert.match(kitCss, /@media\s*\(forced-colors:\s*active\)[\s\S]*CanvasText/);
@@ -376,9 +376,9 @@ test('controlled expansion and callbacks work without a Provider', async () => {
     style.textContent = kitCss;
     document.head.append(style);
     const hostHeader = container.querySelector('.host-collapse-header');
-    assert.equal(window.getComputedStyle(hostHeader).padding, '2px');
+    assert.equal(window.getComputedStyle(hostHeader).padding, '4px 8px');
     const headerText = container.querySelector('.host-collapse-header-text');
-    assert.notEqual(window.getComputedStyle(headerText).padding, '2px');
+    assert.notEqual(window.getComputedStyle(headerText).padding, '4px 8px');
     await click(hostHeader);
     assert.deepEqual(hostToggles, [true]);
     assert.equal(hostHeader.getAttribute('aria-expanded'), 'true');
@@ -586,19 +586,20 @@ test('MessageContentList renders tool details, failed status and reference cards
   ];
   const toolMarkup = html(ui.MessageContentList, { list: toolList });
   assert.match(toolMarkup, /WRITE_TEXT_FILE/);
-  assert.match(toolMarkup, /参数/);
-  assert.match(toolMarkup, /输出/);
   assert.match(toolMarkup, /out\.md/);
   assert.match(toolMarkup, /READ_FILE · error/);
-  assert.match(toolMarkup, /anticon-exclamation-circle/);
+  assert.match(toolMarkup, /data-failed="true"/);
   const incrementalTools = html(ui.MessageContentList, {
     list: [
       { id: 'mcp', type: 'TOOL_CALL', tool_call_name: 'mcp__documents__search' },
       { id: 'bash', type: 'TOOL_CALL', tool_call_name: 'BASH', delta: { command: 'cat notes.md' } },
     ],
     streamingAssistantContentId: 'mcp',
+    contentExpandedMap: { bash_TOOL_CALL: true },
+    onContentExpandedChange() {},
   });
   assert.match(incrementalTools, /正在调用 MCP : documents - search/);
+  assert.match(incrementalTools, /正在输入参数/);
   assert.match(incrementalTools, /cat notes\.md/);
 
   const refList = [
@@ -796,11 +797,10 @@ test('MessageContentList renders tool details, failed status and reference cards
       onContentExpandedChange: (key, next) => toggles.push([key, next]),
     })));
     const headers = [...container.querySelectorAll('.ant-collapse-header')];
-    assert.equal(headers.length, 2);
-    assert.equal(headers[0].getAttribute('aria-expanded'), 'true');
-    assert.equal(headers[1].getAttribute('aria-expanded'), 'false');
-    await act(async () => headers[1].click());
-    assert.deepEqual(toggles, [['ok-tool_TOOL_CALL_output', true]]);
+    assert.equal(headers.length, 1);
+    assert.equal(headers[0].getAttribute('aria-expanded'), 'false');
+    await act(async () => headers[0].click());
+    assert.deepEqual(toggles, [['ok-tool_TOOL_CALL', true]]);
 
     const content = '详见【来源】（#ref:news:1）';
     const frames = [];
@@ -823,4 +823,166 @@ test('MessageContentList renders tool details, failed status and reference cards
       else delete globalThis[key];
     }
   }
+});
+
+test('ToolExecutionCard and command lifecycle rendering support truncation, empty details, failure and copy', async () => {
+  const longPreview = `${'a'.repeat(130)}\nsecond line`;
+  const truncated = html(ui.ToolExecutionCard, {
+    icon: h('span', null, 'I'),
+    label: '读取文件',
+    preview: longPreview,
+    isRunning: true,
+    details: [],
+  });
+  assert.match(truncated, new RegExp(`读取文件 ${'a'.repeat(120)}…`));
+  assert.doesNotMatch(truncated, /second line/);
+  assert.match(truncated, /thinkShine/);
+
+  const emptyExpanded = html(ui.ToolExecutionCard, {
+    icon: h('span', null, 'I'),
+    label: '空工具',
+    expanded: true,
+    details: [{ label: 'input', value: '' }, { label: 'output', value: undefined }],
+  });
+  assert.match(emptyExpanded, /role="status"[^>]*aria-label="暂无详情">\/<\/div>/);
+
+  const waiting = html(ui.MessageContentList, {
+    list: [{ id: 'c1', type: 'TOOL_CALL', tool_call_name: 'BASH', inputComplete: true, input: { command: 'ls' } }],
+    streamingAssistantContentId: 'other',
+  });
+  assert.match(waiting, /等待执行结果/);
+
+  const done = html(ui.MessageContentList, {
+    list: [{
+      id: 'c2', type: 'TOOL_CALL', tool_call_name: 'EXECUTE_SHELL_COMMAND',
+      inputComplete: true, responseReceived: true, returncode: 0, input: { command: 'pwd' }, output: '/app',
+    }],
+  });
+  assert.match(done, /命令执行完成/);
+  assert.doesNotMatch(done, /data-failed="true"/);
+
+  const failedPy = html(ui.MessageContentList, {
+    list: [{
+      id: 'c3', type: 'TOOL_CALL', tool_call_name: 'EXECUTE_PYTHON_CODE',
+      inputComplete: true, responseReceived: true, returncode: 1,
+      input: { code: '1/0' }, output: 'ZeroDivisionError', stderr: 'ZeroDivisionError',
+    }],
+    contentExpandedMap: { c3_TOOL_CALL: true },
+    onContentExpandedChange() {},
+  });
+  assert.match(failedPy, /代码执行失败/);
+  assert.match(failedPy, /data-failed="true"/);
+  assert.equal((failedPy.match(/ZeroDivisionError/g) ?? []).length, 1);
+
+  const window = new Window();
+  const globals = {
+    window, document: window.document, navigator: window.navigator,
+    HTMLElement: window.HTMLElement, Element: window.Element, SVGElement: window.SVGElement,
+    Node: window.Node, ShadowRoot: window.ShadowRoot,
+    getComputedStyle: window.getComputedStyle.bind(window),
+    requestAnimationFrame: window.requestAnimationFrame.bind(window),
+    cancelAnimationFrame: window.cancelAnimationFrame.bind(window),
+    IS_REACT_ACT_ENVIRONMENT: true,
+  };
+  const originals = new Map(Object.keys(globals).map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
+  for (const [key, value] of Object.entries(globals)) Object.defineProperty(globalThis, key, { configurable: true, writable: true, value });
+  const container = document.createElement('div');
+  document.body.append(container);
+  const root = createRoot(container);
+  try {
+    const copied = [];
+    const outerClicks = [];
+    await act(async () => root.render(h('div', { onClick: () => outerClicks.push('outer') },
+      h(ui.ToolExecutionCard, {
+        icon: h('span', null, 'I'),
+        label: '命令执行完成',
+        details: [{ label: 'command', value: 'echo hi' }],
+        onCopy: (text) => copied.push(text),
+      }),
+    )));
+    await act(async () => container.querySelector('.ant-collapse-header').click());
+    assert.equal(outerClicks.length, 0);
+    assert.equal(container.querySelector('.ant-collapse-header').getAttribute('aria-expanded'), 'true');
+    await act(async () => container.querySelector('[aria-label="复制command"]').click());
+    assert.deepEqual(copied, ['echo hi']);
+    assert.equal(outerClicks.length, 0);
+  } finally {
+    await act(async () => root.unmount());
+    await window.happyDOM.close();
+    for (const [key, descriptor] of originals) {
+      if (descriptor) Object.defineProperty(globalThis, key, descriptor);
+      else delete globalThis[key];
+    }
+  }
+});
+
+test('OPC status iconOnly and upgraded timeline entries support new and legacy fields', () => {
+  const iconOnlyDefault = html(ui.OpcStatus, {
+    iconOnly: true,
+    action: { member: '写作专家', onClick() {} },
+  });
+  assert.match(iconOnlyDefault, /anticon-file-search/);
+  assert.match(iconOnlyDefault, /aria-label="查看任务详情 · 写作专家"/);
+  assert.doesNotMatch(iconOnlyDefault, /anticon-right/);
+
+  const iconOnlyRunning = html(ui.OpcStatus, {
+    status: 'running',
+    label: '执行中',
+    iconOnly: true,
+    action: { member: '写作专家', onClick() {} },
+  });
+  assert.match(iconOnlyRunning, /runningShine/);
+  assert.doesNotMatch(iconOnlyRunning, />执行中</);
+
+  const streamingTimeline = html(ui.OpcAnswer, {
+    timeline: [
+      {
+        id: 'leader-live', kind: 'leader', name: '团长', isStreaming: true,
+        process: h('div', null, '流式思考过程'),
+      },
+      {
+        id: 'dispatch-1', kind: 'dispatch', name: '核对团长',
+        assignments: [{ id: 'a1', member: '数据专家', prompt: '检索年报' }],
+      },
+      {
+        id: 'report-1', kind: 'report', name: '数据专家',
+        contents: [
+          { id: 'r1', content: '第一段汇报' },
+          { id: 'r2', content: '第二段汇报', isStreaming: false },
+          { id: 'r3', content: '流式尾部', isStreaming: true },
+        ],
+        target: { kind: 'assignment', id: 'a1' },
+      },
+    ],
+    timelineFooter: h('div', null, '完成页脚'),
+    processing: h('span', null, '任务进行中'),
+    footer: h('div', null, '推荐追问'),
+    onOpenExecution() {},
+  });
+  assert.match(streamingTimeline, /流式思考过程/);
+  assert.match(streamingTimeline, /data-kind="dispatch"[\s\S]*?anticon-team[\s\S]*?<h2>核对团长<\/h2>[\s\S]*?团长[\s\S]*?任务派发/);
+  assert.doesNotMatch(streamingTimeline, /role="alert"/);
+  assert.match(streamingTimeline, /data-kind="report"[\s\S]*?第一段汇报[\s\S]*?第二段汇报[\s\S]*?\|/);
+  assert.doesNotMatch(streamingTimeline, />团员</);
+  assert.match(streamingTimeline, /data-kind="footer"[\s\S]*?anticon-info-circle[\s\S]*?完成页脚/);
+  assert.match(streamingTimeline, /任务进行中[\s\S]*?推荐追问/);
+
+  const fallbackDispatch = html(ui.OpcAnswer, {
+    timeline: [{ id: 'd-default', kind: 'dispatch', assignments: [{ id: 'a1', member: '专家' }] }],
+  });
+  assert.match(fallbackDispatch, /<h2>团长<\/h2>[\s\S]*?任务派发/);
+
+  const completedLeader = html(ui.OpcAnswer, {
+    timeline: [
+      {
+        id: 'leader-done', kind: 'leader', name: '团长', isStreaming: false,
+        processTitle: '执行过程',
+        process: h('div', null, '已折叠步骤'),
+        conclusion: h('div', null, '最终总结'),
+      },
+    ],
+  });
+  assert.match(completedLeader, /执行过程/);
+  assert.doesNotMatch(completedLeader, /已折叠步骤/);
+  assert.match(completedLeader, /最终总结/);
 });

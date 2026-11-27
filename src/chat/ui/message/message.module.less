@@ -64,9 +64,26 @@
   margin-bottom: 16px;
 }
 
+.collapse > :global(:is([class$="-collapse-ghost"], [class*="-collapse-ghost "])) > :global(:is([class$="-collapse-item"], [class*="-collapse-item "])) > :global(:is([class$="-collapse-header"], [class*="-collapse-header "])) {
+  align-items: center;
+  margin-inline: -8px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: @hover;
+  }
+}
+
+.thinkHeader {
+  color: @secondary;
+  font-size: 14px;
+}
+
 .thinkCollapse, .taskCompletedCollapse {
   > :global(:is([class$="-collapse"], [class*="-collapse "])) > :global(:is([class$="-collapse-item"], [class*="-collapse-item "])) > :global(:is([class$="-collapse-header"], [class*="-collapse-header "])) {
-    padding: 2px;
+    padding: 4px 8px;
     color: @secondary;
   }
 
@@ -75,8 +92,9 @@
   }
 }
 .inlineArrow { font-size: 12px; margin-left: 4px; transition: transform 0.2s; }
-.taskCompletedCollapse > :global(:is([class$="-collapse"], [class*="-collapse "])) > :global(:is([class$="-collapse-item"], [class*="-collapse-item "])) > :global(:is([class$="-collapse-header"], [class*="-collapse-header "])) { padding: 2px 2px 8px; border-bottom: 1px solid @border; font-size: 15px; }
-.taskCompletedCollapse > :global(:is([class$="-collapse"], [class*="-collapse "])) > :global(:is([class$="-collapse-item"], [class*="-collapse-item "])) > :global(:is([class$="-collapse-content"], [class*="-collapse-content "])) > :global(:is([class$="-collapse-content-box"], [class*="-collapse-content-box "])) { padding-left: 0; }
+.taskCompletedCollapse { margin-bottom: 8px; }
+.taskCompletedCollapse > :global(:is([class$="-collapse"], [class*="-collapse "])) > :global(:is([class$="-collapse-item"], [class*="-collapse-item "])) > :global(:is([class$="-collapse-header"], [class*="-collapse-header "])) { padding: 4px 8px; font-size: 15px; }
+.taskCompletedCollapse > :global(:is([class$="-collapse"], [class*="-collapse "])) > :global(:is([class$="-collapse-item"], [class*="-collapse-item "])) > :global(:is([class$="-collapse-content"], [class*="-collapse-content "])) > :global(:is([class$="-collapse-content-box"], [class*="-collapse-content-box "])) { padding-top: 8px; padding-left: 0; }
 .taskCompletedCollapse[data-expanded='true'] { margin-bottom: 0; }
 
 .toolCall { margin-bottom: 16px; min-width: 0; }

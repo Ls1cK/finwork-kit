@@ -1,0 +1,124 @@
+@import '../tokens.less';
+
+.card {
+  width: 100%;
+  min-width: 0;
+  margin-bottom: 16px;
+
+  .collapse {
+    margin-bottom: 0;
+  }
+
+  :global(:is([class$="-collapse-header-text"], [class*="-collapse-header-text "])) {
+    min-width: 0;
+  }
+
+  :global(:is([class$="-collapse-content"], [class*="-collapse-content "])) > :global(:is([class$="-collapse-content-box"], [class*="-collapse-content-box "])) {
+    padding: 8px 0 0;
+  }
+
+  &[data-failed] .label {
+    color: color-mix(in srgb, @text 45%, @error);
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  color: @secondary;
+  font-size: 14px;
+
+  > :global(.anticon) {
+    flex: none;
+  }
+}
+
+.label {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.chevron {
+  flex: none;
+  font-size: 12px;
+  transition: transform 0.2s;
+
+  [data-expanded='true'] & {
+    transform: rotate(90deg);
+  }
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.detail {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: @light;
+
+  pre {
+    width: 100%;
+    max-height: 240px;
+    overflow: auto;
+    margin: 0;
+    color: @text;
+    font: 12px/1.6 ui-monospace, Menlo, Consolas, monospace;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+  }
+}
+
+.emptyDetail {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  color: @tertiary;
+  font-size: 14px;
+}
+
+.detailHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.detailLabel {
+  color: @tertiary;
+  font: 12px/20px ui-monospace, Menlo, Consolas, monospace;
+}
+
+.copyButton {
+  display: grid;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: @secondary;
+  cursor: pointer;
+
+  &:hover {
+    background: @hover;
+    color: @text;
+  }
+}
+
+.copyButton:focus-visible,
+.detail pre:focus-visible {
+  outline: 2px solid @secondary;
+  outline-offset: -2px;
+}

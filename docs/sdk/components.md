@@ -60,11 +60,13 @@ export function OrdinaryAnswer({
 
 ## OPC 时间线与详情
 
-`state.timeline` 保存事件顺序。根据条目中的 ID 从 `state.replies` 或 `state.assignments` 获取内容，再映射成 `OpcTimelineEntry[]`。状态文案可由应用统一配置。
+`groupOpcTimeline(state)` 将 `state.timeline` 聚合为有序的团长过程/正文、同回复派发卡片与团员汇报，`isOpcBlockStreaming(block)` 用于判断过程块是否仍在流式执行。状态文案可由应用统一配置。
 
 ```tsx | pure
 import { useState } from 'react';
 import {
+  groupOpcTimeline,
+  isOpcBlockStreaming,
   resolveOpcExecution,
   type OpcReply,
   type OpcRoundState,
@@ -91,9 +93,9 @@ function describeStatus(status: OpcReply['status'] | 'idle'): OpcStatusProps {
 }
 
 export function toOpcTimeline(state: OpcRoundState): OpcTimelineEntry[] {
-  return state.timeline.flatMap<OpcTimelineEntry>((event) => {
-    if (event.kind === 'dispatch') {
-      const assignments = event.assignmentIds.flatMap((id) => {
+  return groupOpcTimeline(state).map<OpcTimelineEntry>((entry) => {
+    if (entry.kind === 'dispatch') {
+      const assignments = entry.assignmentIds.flatMap((id) => {
         const task = state.assignments[id];
         if (!task) return [];
         const reply = task.replyId ? state.replies[task.replyId] : undefined;
@@ -105,40 +107,43 @@ export function toOpcTimeline(state: OpcRoundState): OpcTimelineEntry[] {
           status: describeStatus(reply?.status ?? 'idle'),
         }];
       });
-      return assignments.length
-        ? [{ id: `dispatch:${event.assignmentIds[0]}`, kind: 'dispatch', assignments }]
-        : [];
+      return { id: entry.id, kind: 'dispatch', name: entry.reply?.name, avatarUrl: entry.reply?.avatarUrl, assignments };
     }
 
-    const reply = state.replies[event.replyId];
-    if (!reply) return [];
-    if (event.kind === 'leader') {
-      const block = reply.blocks.find(({ id }) => id === event.blockId);
-      if (!block || block.type !== 'ASSISTANT_MSG') return [];
-      return [{
-        id: block.id,
+    if (entry.kind === 'leader') {
+      const isStreaming = entry.reply.status === 'running' && entry.content.some(isOpcBlockStreaming);
+      const conclusion = isStreaming
+        ? undefined
+        : entry.content.find((block) => block.type === 'ASSISTANT_MSG' && block.content.trim());
+      const processBlocks = entry.content.filter((block) => block !== conclusion);
+      return {
+        id: entry.id,
         kind: 'leader',
-        name: reply.name,
-        avatarUrl: reply.avatarUrl,
-        content: block.content,
-        isStreaming: block.streaming,
-      }];
+        name: entry.reply.name,
+        avatarUrl: entry.reply.avatarUrl,
+        isStreaming,
+        process: processBlocks.length > 0 ? <MessageContentList list={processBlocks} /> : undefined,
+        conclusion: conclusion ? <MessageContentList list={[conclusion]} /> : undefined,
+      };
     }
 
-    const target = { kind: 'reply', id: reply.id } as const;
+    const target = { kind: 'reply', id: entry.reply.id } as const;
     const assignment = resolveOpcExecution(state, target)?.assignment;
-    const content = reply.blocks
-      .flatMap((block) => block.type === 'ASSISTANT_MSG' ? [block.content] : [])
-      .join('\n\n');
-    return [{
-      id: `report:${reply.id}`,
+    const contents = entry.reply.blocks.flatMap((block) =>
+      block.type === 'ASSISTANT_MSG' && block.content.trim()
+        ? [{ id: block.id, content: block.content, isStreaming: block.streaming }]
+        : [],
+    );
+    return {
+      id: entry.id,
       kind: 'report',
-      name: reply.name,
-      avatarUrl: reply.avatarUrl,
-      content: content || assignment?.result?.text,
-      status: describeStatus(reply.status),
+      name: entry.reply.name,
+      avatarUrl: entry.reply.avatarUrl,
+      contents,
+      content: contents.length === 0 ? assignment?.result?.text : undefined,
+      status: describeStatus(entry.reply.status),
       target,
-    }];
+    };
   });
 }
 
@@ -163,4 +168,4 @@ export function OpcAnswerWithDetails({ state }: { state: OpcRoundState }) {
 
 渲染多轮时，用稳定的 `roundKey` 作为 `OpcAnswerWithDetails` 的 React key。这样切换轮次时，上一轮选中的执行项随组件一起重置。派发项可能在专家回复建立前就可点击，此时 `resolveOpcExecution` 只返回 `assignment`，可以先展示任务描述。
 
-需要专家和任务选择器时，将这段详情区换成 `OpcExpertPanel`。给 `members` 传专家列表，给 `tasks` 传当前专家的任务列表。面板会回传专家 ID 和任务 ID。用同一套 target 恢复选中的任务，把执行块交给面板的 `children`。正在更新的文本块可用块的 `streaming` 标记选出，并将其 ID 传给详情列表的 `streamingAssistantContentId`。[OPC 组件页](/reference/opc)有可操作的面板示例。
+需要专家和任务选择器时，将这段详情区换成 `OpcExpertPanel`。给 `members` 传专家列表，给 `tasks` 传当前专家的任务列表。面板会回传专家 ID 和任务 ID。用同一套 target 恢复选中的任务，把执行块交给面板的 `children`；当专家回复仍在流式输出时建议直接平铺展示执行过程，完成后再通过 `TaskCompletedSplit` 折叠过程、突出结论。正在更新的块可通过 `isOpcBlockStreaming(block)` 选出，并将其 ID 传给详情列表的 `streamingAssistantContentId`。[OPC 组件页](/reference/opc)有可操作的面板示例。

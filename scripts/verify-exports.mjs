@@ -22,7 +22,7 @@ const ui = await import('@lz19.02/finwork-kit/chat/ui');
 for (const name of [
   'MessageItem', 'UserMessage', 'AiMessage', 'SystemMessage', 'MessageContentList',
   'MessageContentItem', 'MessageCollapse', 'ThinkContent', 'AssistantContent',
-  'ToolCallMsg', 'ToolCallResponse', 'ContextCompressContent', 'AskUserQuestionContent',
+  'ToolCallMsg', 'ToolCallResponse', 'ToolExecutionCard', 'ContextCompressContent', 'AskUserQuestionContent',
   'TaskCompletedSplit', 'MultiSubAgentCard', 'SubAgentListItem', 'MessageActions',
   'SuggestedQuestions', 'ChatCompletedResult', 'MessageFileCard', 'MessageFileList',
   'SkillOutputCard', 'OutputFilesCollapse',
@@ -47,10 +47,13 @@ try {
   const detail = pathToFileURL(join(isolated, 'dist/chat/core-detail.js')).href;
   const check = [
     "import assert from 'node:assert/strict';",
-    'import { testCoreSse, decodeFrame, createRound, reduceRound, reduceStreamBatch, resolveOpcExecution } from ' + JSON.stringify(sse) + ';',
+    'import { testCoreSse, decodeFrame, createRound, reduceRound, reduceStreamBatch, resolveOpcExecution, getCommandToolName, isOpcBlockStreaming, groupOpcTimeline } from ' + JSON.stringify(sse) + ';',
     'import { testCoreDetail, parseDetailFrames, replayTaskRecords } from ' + JSON.stringify(detail) + ';',
     "assert.equal(testCoreSse(), 'core-sse:ok');",
     "assert.equal(testCoreDetail(), 'core-detail:ok');",
+    "assert.equal(getCommandToolName('bash'), 'BASH');",
+    "assert.equal(isOpcBlockStreaming({ id: 'b', type: 'TOOL_CALL', sourceId: 's' }), true);",
+    "assert.deepEqual(groupOpcTimeline(createRound({ roundKey: 'g', kind: 'opc' })), []);",
     "const frame = { type: 'ASSISTANT_MSG_END', id: 'a', content: 'SDK output' };",
     "const decoded = decodeFrame(JSON.stringify(frame));",
     "assert.ok(decoded.ok);",

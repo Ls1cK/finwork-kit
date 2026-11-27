@@ -64,9 +64,10 @@ Antd v4 使用 Less 编译主题时，主色已经固化在宿主 CSS 中。将�
 | --- | --- |
 | `--finwork-primary-color`、`--finwork-primary-hover-color`、`--finwork-primary-bg` | 品牌主色、悬停色与浅背景 |
 | `--finwork-text-color`、`--finwork-text-secondary`、`--finwork-text-tertiary` | 正文与辅助文字 |
+| `--finwork-text-title`、`--finwork-text-disabled` | 思考扫光高亮与弱化灰阶 |
 | `--finwork-bg-color`、`--finwork-bg-secondary`、`--finwork-bg-hover` | 表面、次级与悬停背景 |
 | `--finwork-border-color` | 边框 |
-| `--finwork-success-color`、`--finwork-warning-color`、`--finwork-error-color`、`--finwork-info-color` | 语义颜色，优先沿用对应 Antd 变量 |
+| `--finwork-success-color`、`--finwork-warning-color`、`--finwork-error-color`、`--finwork-info-color`、`--finwork-purple-color` | 语义颜色与 OPC 团长角色色，前四项优先沿用对应 Antd 变量 |
 | `--finwork-code-bg-color`、`--finwork-code-text-color`、`--finwork-code-border-color` | 代码容器背景、正文与边框，高亮语法色使用作用域内的 VS2015 主题 |
 
 局部 CSS 变量负责 Kit 自有样式，Antd 基础组件的主题由宿主 Antd 样式负责。使用 file/link 开发时，将 `react`、`react-dom`、`antd`、`@ant-design/icons` 加入 Vite `resolve.dedupe`，让两侧解析到同一实例。

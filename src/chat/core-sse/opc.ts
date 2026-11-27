@@ -1,9 +1,11 @@
 import { readAnswerMetadata, readQuestionUpdate, readUserAnswerUpdate, sameFields, type AnswerMetadata, type AnswerQuestionBlock } from './answer.js';
+import { getCommandToolName } from './commandTool.js';
 import {
   asRecord,
   isRoundTerminalStatus,
   readCompletion,
   readId,
+  readNumber,
   readString,
   readSuggestedQuestions,
   readUsage,
@@ -31,10 +33,17 @@ interface OpcToolBlock extends CoreContentBlock {
   readonly type: 'TOOL_CALL';
   readonly sourceId: string;
   readonly tool_call_name?: string;
+  readonly delta?: Readonly<Record<string, unknown>>;
   readonly input?: unknown;
   readonly output?: unknown;
   readonly state?: string;
   readonly inputEnded?: true;
+  readonly inputComplete?: true;
+  readonly responseReceived?: true;
+  readonly returncode?: number | string;
+  readonly stdout?: string;
+  readonly stderr?: string;
+  readonly error?: string;
 }
 
 export type OpcBlock = OpcTextBlock | OpcToolBlock;
@@ -62,8 +71,121 @@ export interface OpcAssignment {
 
 export type OpcTimelineItem =
   | { readonly kind: 'leader'; readonly replyId: string; readonly blockId: string }
-  | { readonly kind: 'dispatch'; readonly assignmentIds: readonly string[] }
+  | { readonly kind: 'dispatch'; readonly replyId?: string; readonly assignmentIds: readonly string[] }
   | { readonly kind: 'report'; readonly replyId: string };
+
+export type OpcGroupedTimelineEntry<T extends CoreContentBlock = never> =
+  | {
+      readonly kind: 'leader';
+      readonly id: string;
+      readonly reply: OpcReply<T>;
+      readonly content: readonly OpcBlock[];
+    }
+  | {
+      readonly kind: 'dispatch';
+      readonly id: string;
+      readonly reply?: OpcReply<T>;
+      readonly assignmentIds: readonly string[];
+    }
+  | {
+      readonly kind: 'report';
+      readonly id: string;
+      readonly reply: OpcReply<T>;
+    };
+
+export function isOpcBlockStreaming(block: OpcBlock): boolean {
+  return block.type === 'TOOL_CALL'
+    ? !block.state && !block.responseReceived
+    : block.streaming;
+}
+
+export function groupOpcTimeline<T extends CoreContentBlock = never>(
+  state: OpcRoundState<T>,
+): OpcGroupedTimelineEntry<T>[] {
+  type InternalLeaderEntry = {
+    kind: 'leader';
+    id: string;
+    reply: OpcReply<T>;
+    content: OpcBlock[];
+    hasAssistant: boolean;
+  };
+  type InternalDispatchEntry = {
+    kind: 'dispatch';
+    id: string;
+    reply?: OpcReply<T>;
+    assignmentIds: string[];
+  };
+  type InternalEntry = InternalLeaderEntry | InternalDispatchEntry | {
+    kind: 'report';
+    id: string;
+    reply: OpcReply<T>;
+  };
+
+  const entries: InternalEntry[] = [];
+  let currentLeader: InternalLeaderEntry | undefined;
+  let currentDispatch: InternalDispatchEntry | undefined;
+
+  state.timeline.forEach((item, key) => {
+    if (item.kind === 'report') {
+      const reply = ownValue(state.replies, item.replyId);
+      if (!reply) return;
+      entries.push({ kind: 'report', id: `report:${reply.id}`, reply });
+      currentLeader = undefined;
+      currentDispatch = undefined;
+      return;
+    }
+
+    if (item.kind === 'dispatch') {
+      const reply = item.replyId ? ownValue(state.replies, item.replyId) : undefined;
+      if (currentDispatch && currentDispatch.reply?.id === reply?.id) {
+        currentDispatch.assignmentIds.push(...item.assignmentIds);
+      } else {
+        currentDispatch = {
+          kind: 'dispatch',
+          id: `dispatch:${item.assignmentIds[0]}`,
+          reply,
+          assignmentIds: [...item.assignmentIds],
+        };
+        entries.push(currentDispatch);
+      }
+      return;
+    }
+
+    const reply = ownValue(state.replies, item.replyId);
+    const block = reply?.blocks.find((entry) => entry.id === item.blockId);
+    if (!reply || !block) return;
+    const isAssignmentTool =
+      block.type === 'TOOL_CALL' && block.tool_call_name?.toUpperCase() === 'TEAMASSIGN';
+    const isAssistant = block.type === 'ASSISTANT_MSG';
+    // 同批委派调用留在团长节点内，派发结果汇总到紧随其后的独立节点。
+    if (
+      !currentLeader ||
+      currentLeader.reply.id !== reply.id ||
+      (isAssistant && currentLeader.hasAssistant) ||
+      (currentDispatch && !isAssignmentTool)
+    ) {
+      currentLeader = {
+        kind: 'leader',
+        id: `leader:${key}`,
+        reply,
+        content: [],
+        hasAssistant: false,
+      };
+      currentDispatch = undefined;
+      entries.push(currentLeader);
+    }
+    currentLeader.content.push(block);
+    currentLeader.hasAssistant ||= isAssistant;
+  });
+
+  return entries.flatMap<OpcGroupedTimelineEntry<T>>((entry) => {
+    if (entry.kind !== 'leader') return [entry];
+    if (!entry.content.some((block) => block.type !== 'ASSISTANT_MSG' || block.content.trim())) {
+      return [];
+    }
+    return [{ kind: 'leader', id: entry.id, reply: entry.reply, content: entry.content }];
+  });
+}
 
 export interface OpcRoundState<T extends CoreContentBlock = never> extends RoundBase {
   readonly kind: 'opc';
@@ -149,9 +271,13 @@ function createDraft<T extends CoreContentBlock>(previous: OpcRoundState<T>) {
       else blocks[index] = block;
     },
     appendTimeline(item: OpcTimelineItem) {
+      const existing = timeline ?? state.timeline;
+      if (item.kind === 'report' && existing.some((entry) => entry.kind === 'report' && entry.replyId === item.replyId)) {
+        return;
+      }
       const items = timeline ??= [...state.timeline];
       const last = items[items.length - 1];
-      if (item.kind === 'dispatch' && last?.kind === 'dispatch') {
+      if (item.kind === 'dispatch' && last?.kind === 'dispatch' && last.replyId === item.replyId) {
         items[items.length - 1] = { ...last, assignmentIds: [...last.assignmentIds, ...item.assignmentIds] };
       } else {
         items.push(item);
@@ -249,33 +375,81 @@ function updateTool<T extends CoreContentBlock>(
   const index = reply.blocks.findIndex((block) => block.id === blockId);
   const block = reply.blocks[index];
   const previous = block?.type === 'TOOL_CALL' ? block : undefined;
-  if (type !== 'TOOL_RESPONSE' && (previous?.inputEnded || (type === 'TOOL_CALL_START' && previous))) return false;
+  const isResponse = type === 'TOOL_RESPONSE';
+  if (!isResponse && (previous?.inputEnded || (type === 'TOOL_CALL_START' && previous))) return false;
 
   const toolName = readId(frame.tool_call_name) ?? previous?.tool_call_name ?? readId(frame.tool_result_name);
-  const input = (type === 'TOOL_CALL' ? frame.delta ?? frame.input : frame.input) ?? previous?.input;
-  const output = frame.output ?? previous?.output;
-  const status = readId(frame.state) ?? previous?.state;
+  const delta = isResponse ? previous?.delta : (asRecord(frame.delta) ?? previous?.delta);
+  const input = isResponse ? previous?.input : (frame.input !== undefined ? frame.input : previous?.input);
+  const output = frame.output !== undefined ? frame.output : previous?.output;
+  const isTeamAssign = toolName?.toUpperCase() === 'TEAMASSIGN';
+  const finalInput = type === 'TOOL_CALL_END' && isTeamAssign && reply.role === 'leader' && !assignment
+    ? asRecord(frame.input)
+    : undefined;
+  const dispatchMember = readId(finalInput?.member);
+  const status = assignment || dispatchMember
+    ? 'success'
+    : (readId(frame.state) ?? readId(frame.status) ?? previous?.state);
+  const isCommand = Boolean(getCommandToolName(toolName));
   const inputEnded = type === 'TOOL_CALL_END' ? true : previous?.inputEnded;
-  if (type === 'TOOL_CALL_END' && toolName === 'TeamAssign' && reply.role === 'leader' && !assignment) {
-    const finalInput = asRecord(frame.input);
-    const member = readId(finalInput?.member);
-    if (member) {
-      draft.putAssignment({ id: assignmentId, member, prompt: readString(finalInput?.prompt) ?? '' });
-      draft.appendTimeline({ kind: 'dispatch', assignmentIds: [assignmentId] });
+  const inputComplete = type === 'TOOL_CALL_END' || (isCommand && isResponse) ? true : previous?.inputComplete;
+  const responseReceived = isResponse ? true : previous?.responseReceived;
+  const returncode = isCommand
+    ? (readNumber(frame.returncode) ?? readString(frame.returncode) ?? previous?.returncode)
+    : previous?.returncode;
+  const stdout = isCommand ? (readString(frame.stdout) ?? previous?.stdout) : previous?.stdout;
+  const stderr = isCommand ? (readString(frame.stderr) ?? previous?.stderr) : previous?.stderr;
+  const error = isCommand ? (readString(frame.error) ?? previous?.error) : previous?.error;
+
+  const changed = !previous ||
+    previous.tool_call_name !== toolName ||
+    previous.delta !== delta ||
+    previous.input !== input ||
+    previous.output !== output ||
+    previous.state !== status ||
+    previous.inputEnded !== inputEnded ||
+    previous.inputComplete !== inputComplete ||
+    previous.responseReceived !== responseReceived ||
+    previous.returncode !== returncode ||
+    previous.stdout !== stdout ||
+    previous.stderr !== stderr ||
+    previous.error !== error;
+
+  if (changed) {
+    const nextBlock: OpcToolBlock = {
+      id: blockId,
+      type: 'TOOL_CALL',
+      sourceId,
+      tool_call_name: toolName,
+      ...(delta !== undefined ? { delta } : {}),
+      input,
+      output,
+      state: status,
+      ...(inputEnded ? { inputEnded } : {}),
+      ...(inputComplete ? { inputComplete } : {}),
+      ...(responseReceived ? { responseReceived } : {}),
+      ...(returncode !== undefined ? { returncode } : {}),
+      ...(stdout !== undefined ? { stdout } : {}),
+      ...(stderr !== undefined ? { stderr } : {}),
+      ...(error !== undefined ? { error } : {}),
+    };
+    draft.putBlock(reply, index, nextBlock);
+    if (index === -1 && reply.role === 'leader') {
+      draft.appendTimeline({ kind: 'leader', replyId: reply.id, blockId });
     }
   }
-  if (type === 'TOOL_RESPONSE' && assignment) {
+
+  if (dispatchMember) {
+    draft.putAssignment({ id: assignmentId, member: dispatchMember, prompt: readString(finalInput?.prompt) ?? '' });
+    draft.appendTimeline({ kind: 'dispatch', replyId: reply.id, assignmentIds: [assignmentId] });
+  }
+  if (isResponse && assignment) {
     const result = { state: readString(frame.state) ?? '', text: readString(frame.output) ?? '' };
     if (assignment.result?.state !== result.state || assignment.result?.text !== result.text) {
       draft.putAssignment({ ...assignment, result });
     }
   }
 
-  if (previous && previous.tool_call_name === toolName && previous.input === input &&
-    previous.output === output && previous.state === status && previous.inputEnded === inputEnded) return true;
-  draft.putBlock(reply, index, {
-    id: blockId, type: 'TOOL_CALL', sourceId, tool_call_name: toolName, input, output, state: status, inputEnded,
-  });
   return true;
 }
 
@@ -317,10 +491,11 @@ function applyReplyFrame<T extends CoreContentBlock>(
     return true;
   }
 
-  const sourceId = readId(frame.id);
   const workerFrame = frame.type.startsWith('WORKER_');
-  if (!sourceId || workerFrame !== (reply.role === 'worker')) return false;
+  if (workerFrame !== (reply.role === 'worker')) return false;
   const type = workerFrame ? frame.type.slice('WORKER_'.length) : frame.type;
+  const sourceId = (type === 'TOOL_RESPONSE' ? readId(frame.tool_call_id) : undefined) ?? readId(frame.id);
+  if (!sourceId) return false;
   const blockType = type.replace(/_(START|END)$/, '');
   if (blockType !== 'ASSISTANT_MSG' && blockType !== 'THINK_MSG') {
     return updateTool(draft, reply, frame, type, sourceId);
@@ -339,8 +514,11 @@ function applyReplyFrame<T extends CoreContentBlock>(
   const streaming = !type.endsWith('_END');
   if (previous && content === oldText && streaming === previous.streaming) return true;
   draft.putBlock(reply, index, { id: blockId, sourceId, type: blockType, content, streaming });
-  if (index === -1 && reply.role === 'leader' && blockType === 'ASSISTANT_MSG') {
+  if (index === -1 && reply.role === 'leader') {
     draft.appendTimeline({ kind: 'leader', replyId, blockId });
+  }
+  if (reply.role === 'worker' && blockType === 'ASSISTANT_MSG' && content.trim()) {
+    draft.appendTimeline({ kind: 'report', replyId });
   }
   return true;
 }

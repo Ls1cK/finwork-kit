@@ -34,6 +34,13 @@ export interface MessageContent {
   output?: unknown;
   delta?: Readonly<Record<string, unknown>>;
   state?: string;
+  error?: string;
+  stdout?: string;
+  stderr?: string;
+  returncode?: number | string;
+  inputComplete?: boolean;
+  responseReceived?: boolean;
+  inputEnded?: boolean;
   tool_call_name?: string;
   tool_result_name?: string;
   contextCompressStatus?: 'unfinished' | 'success' | 'failed';

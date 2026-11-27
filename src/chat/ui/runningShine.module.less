@@ -1,6 +1,6 @@
 @import './tokens.less';
 
-@think-cycle-duration: 2.5s;
+@think-cycle-duration: 2s;
 
 .thinkHeading {
   display: inline-block;
@@ -43,15 +43,16 @@
     animation: thinkDotsCycle @think-cycle-duration steps(1) infinite;
   }
 
-  @supports (background-clip: text) and (color: color-mix(in srgb, #000 50%, transparent)) {
+  @supports (background-clip: text) {
     .thinkShine {
       background: linear-gradient(
-          90deg,
-          @secondary 29%,
-          color-mix(in srgb, @info 76%, #000) 50%,
-          @secondary 71%
+          110deg,
+          @text-disabled 35%,
+          @text-title 50%,
+          @text-disabled 65%
         )
-        right center / 360% 100% no-repeat;
+        right center / 240% 100% no-repeat;
+      -webkit-background-clip: text;
       background-clip: text;
       color: transparent;
       animation: thinkShineSweep @think-cycle-duration linear infinite;

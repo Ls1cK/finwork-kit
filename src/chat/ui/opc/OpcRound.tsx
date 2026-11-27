@@ -1,6 +1,7 @@
 import { useId, type ReactNode } from 'react';
-import { ApartmentOutlined, RightOutlined } from '@ant-design/icons';
+import { InfoCircleOutlined, RightOutlined } from '@ant-design/icons';
 import { StreamingMarkdownRenderer } from '../markdown/StreamingMarkdownRenderer';
+import { MessageCollapse } from '../message/MessageCollapse';
 import { MessageContentList } from '../message/MessageContentList';
 import type { MessageAppearanceProps, MessageContent } from '../message/types';
 import { OpcAvatar, OpcStatus, type OpcStatusProps } from './OpcIdentity';
@@ -18,25 +19,60 @@ export interface OpcDispatch {
   member: string;
   avatarUrl?: string;
   prompt?: string;
-  status: ExecutionStatus;
+  status?: ExecutionStatus;
+}
+
+export interface OpcReportContent {
+  id: string;
+  content: string;
+  isStreaming?: boolean;
 }
 
 export type OpcTimelineEntry =
-  | { id: string; kind: 'leader'; name: string; avatarUrl?: string; content?: string; isStreaming?: boolean }
-  | { id: string; kind: 'dispatch'; assignments: readonly OpcDispatch[] }
   | {
-      id: string; kind: 'report'; name: string; avatarUrl?: string; content?: string;
-      status: ExecutionStatus; note?: string; target: OpcExecutionTarget;
+      id: string;
+      kind: 'leader';
+      name: string;
+      avatarUrl?: string;
+      content?: string;
+      isStreaming?: boolean;
+      process?: ReactNode;
+      conclusion?: ReactNode;
+      processTitle?: ReactNode;
+      processExpanded?: boolean;
+      defaultProcessExpanded?: boolean;
+      onProcessExpandedChange?: (expanded: boolean) => void;
+    }
+  | {
+      id: string;
+      kind: 'dispatch';
+      name?: string;
+      avatarUrl?: string;
+      assignments: readonly OpcDispatch[];
+    }
+  | {
+      id: string;
+      kind: 'report';
+      name: string;
+      avatarUrl?: string;
+      content?: string;
+      contents?: readonly OpcReportContent[];
+      roleLabel?: ReactNode;
+      status?: ExecutionStatus;
+      note?: string;
+      target: OpcExecutionTarget;
     };
 
 export interface OpcTimelineProps extends MessageAppearanceProps {
   timeline: readonly OpcTimelineEntry[];
+  timelineFooter?: ReactNode;
   onOpenExecution?: (target: OpcExecutionTarget) => void;
 }
 
 export interface OpcAnswerProps extends OpcTimelineProps {
   contentList?: readonly MessageContent[];
   error?: string;
+  processing?: ReactNode;
   footer?: ReactNode;
 }
 
@@ -45,47 +81,73 @@ export interface OpcRoundProps extends OpcAnswerProps {
   userMessage?: ReactNode;
 }
 
-export function OpcRound({ id, userMessage, timeline, contentList, error, footer, onOpenExecution, className, style }: OpcRoundProps) {
+export function OpcRound({
+  id, userMessage, timeline, timelineFooter, contentList, error, processing, footer, onOpenExecution, className, style,
+}: OpcRoundProps) {
   return (
     <section id={id} data-chat-row-id={id} className={`${styles.round} ${className ?? ''}`} style={style}>
       {userMessage}
-      <OpcAnswer timeline={timeline} contentList={contentList} error={error} footer={footer} onOpenExecution={onOpenExecution} />
+      <OpcAnswer
+        timeline={timeline}
+        timelineFooter={timelineFooter}
+        contentList={contentList}
+        error={error}
+        processing={processing}
+        footer={footer}
+        onOpenExecution={onOpenExecution}
+      />
     </section>
   );
 }
 
-export function OpcAnswer({ timeline, contentList, error, footer, onOpenExecution, className, style }: OpcAnswerProps) {
+export function OpcAnswer({
+  timeline, timelineFooter, contentList, error, processing, footer, onOpenExecution, className, style,
+}: OpcAnswerProps) {
   const questions = contentList?.filter(({ type }) => type === 'ASK_USER_QUESTION');
-  if (!timeline.length && !questions?.length && !error && footer == null) return null;
+  if (
+    !timeline.length &&
+    timelineFooter == null &&
+    !questions?.length &&
+    !error &&
+    processing == null &&
+    footer == null
+  ) {
+    return null;
+  }
   return (
     <div className={`${styles.answer} ${className ?? ''}`} style={style}>
-      <OpcTimeline timeline={timeline} onOpenExecution={onOpenExecution} />
+      <OpcTimeline timeline={timeline} timelineFooter={timelineFooter} onOpenExecution={onOpenExecution} />
       {!!questions?.length && <MessageContentList list={questions} />}
       {error && <p className={styles.error} role="alert">{error}</p>}
+      {processing != null && <div className={styles.processingIcon}>{processing}</div>}
       {footer != null && <div className={styles.footer}>{footer}</div>}
     </div>
   );
 }
 
-export function OpcTimeline({ timeline, onOpenExecution, className, style }: OpcTimelineProps) {
+export function OpcTimeline({ timeline, timelineFooter, onOpenExecution, className, style }: OpcTimelineProps) {
   const promptIdPrefix = useId();
-  if (timeline.length === 0) return null;
+  if (timeline.length === 0 && timelineFooter == null) return null;
   return (
     <ol className={`${styles.events} ${className ?? ''}`} style={style} aria-label="协作时间线" role="list">
       {timeline.map((entry, entryIndex) => (
         <li className={styles.event} data-kind={entry.kind} key={entry.id}>
           <span className={styles.eventIcon} aria-hidden="true">
-            {entry.kind === 'dispatch' ? <ApartmentOutlined /> : (
-              <OpcAvatar role={entry.kind === 'leader' ? 'leader' : 'worker'} src={entry.avatarUrl} />
-            )}
+            <OpcAvatar
+              role={entry.kind === 'report' ? 'worker' : 'leader'}
+              src={entry.avatarUrl}
+            />
           </span>
           <div className={styles.eventBody}>
             {entry.kind === 'dispatch' ? (
               <div className={styles.dispatchCard}>
                 <div className={styles.cardHeading}>
-                  <div className={styles.heading}>
-                    <h2>任务派发</h2>
-                    <span className={styles.eventRole}>系统</span>
+                  <div className={styles.dispatchHeadingTitle}>
+                    <div className={styles.heading}>
+                      <h2>{entry.name || '团长'}</h2>
+                      <span className={styles.eventRole}>团长</span>
+                    </div>
+                    <p className={styles.dispatchSubtitle}>任务派发</p>
                   </div>
                   <span className={styles.meta}>{entry.assignments.length} 项任务</span>
                 </div>
@@ -99,13 +161,16 @@ export function OpcTimeline({ timeline, onOpenExecution, className, style }: Opc
                             <OpcAvatar src={task.avatarUrl} size={24} />
                             <strong>{task.member}</strong>
                           </div>
-                          <OpcStatus
-                            {...task.status}
-                            action={onOpenExecution && {
-                              member: task.member,
-                              onClick: () => onOpenExecution({ kind: 'assignment', id: task.id }),
-                            }}
-                          />
+                          {(task.status || onOpenExecution) && (
+                            <OpcStatus
+                              {...(task.status ?? {})}
+                              iconOnly
+                              action={onOpenExecution && {
+                                member: task.member,
+                                onClick: () => onOpenExecution({ kind: 'assignment', id: task.id }),
+                              }}
+                            />
+                          )}
                         </div>
                         {task.prompt && (
                           <details className={styles.dispatchTask}>
@@ -126,7 +191,29 @@ export function OpcTimeline({ timeline, onOpenExecution, className, style }: Opc
                   <h2>{entry.name}</h2>
                   <span className={styles.eventRole}>团长</span>
                 </div>
-                {entry.content ? (
+                {entry.process != null || entry.conclusion != null ? (
+                  <div className={styles.leaderText}>
+                    {entry.isStreaming
+                      ? entry.process
+                      : entry.process != null && (
+                          <MessageCollapse
+                            className={styles.leaderProcessCollapse}
+                            title={entry.processTitle ?? '执行过程'}
+                            arrowPlacement="inline"
+                            destroyInactivePanel
+                            expanded={entry.processExpanded}
+                            defaultExpanded={entry.defaultProcessExpanded}
+                            onExpandedChange={entry.onProcessExpandedChange}
+                          >
+                            {entry.process}
+                          </MessageCollapse>
+                        )}
+                    {entry.conclusion ??
+                      (entry.content && (
+                        <StreamingMarkdownRenderer content={entry.content} isStreaming={entry.isStreaming} />
+                      ))}
+                  </div>
+                ) : entry.content ? (
                   <div className={styles.leaderText}>
                     <StreamingMarkdownRenderer content={entry.content} isStreaming={entry.isStreaming} />
                   </div>
@@ -137,20 +224,29 @@ export function OpcTimeline({ timeline, onOpenExecution, className, style }: Opc
                 <div className={styles.cardHeading}>
                   <div className={styles.heading}>
                     <h2>{entry.name}</h2>
-                    <span className={styles.eventRole}>团员</span>
+                    {entry.roleLabel != null && <span className={styles.eventRole}>{entry.roleLabel}</span>}
                     {entry.note && <span className={styles.meta}>{entry.note}</span>}
                   </div>
-                  <OpcStatus
-                    {...entry.status}
-                    action={onOpenExecution && {
-                      member: entry.name,
-                      onClick: () => onOpenExecution(entry.target),
-                    }}
-                  />
+                  {(entry.status || onOpenExecution) && (
+                    <OpcStatus
+                      {...(entry.status ?? {})}
+                      action={onOpenExecution && {
+                        member: entry.name,
+                        onClick: () => onOpenExecution(entry.target),
+                      }}
+                    />
+                  )}
                 </div>
-                {entry.content && (
+                {(!!entry.contents?.length || entry.content) && (
                   <div className={styles.reportBody}>
-                    <StreamingMarkdownRenderer content={entry.content} />
+                    {entry.contents?.map((block) => (
+                      <StreamingMarkdownRenderer
+                        key={block.id}
+                        content={block.content}
+                        isStreaming={block.isStreaming}
+                      />
+                    ))}
+                    {entry.content && <StreamingMarkdownRenderer content={entry.content} />}
                   </div>
                 )}
               </div>
@@ -158,6 +254,14 @@ export function OpcTimeline({ timeline, onOpenExecution, className, style }: Opc
           </div>
         </li>
       ))}
+      {timelineFooter != null && (
+        <li className={styles.event} data-kind="footer">
+          <span className={styles.eventIcon} aria-hidden="true">
+            <InfoCircleOutlined />
+          </span>
+          <div className={styles.eventBody}>{timelineFooter}</div>
+        </li>
+      )}
     </ol>
   );
 }

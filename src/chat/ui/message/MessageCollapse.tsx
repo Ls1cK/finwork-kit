@@ -12,7 +12,7 @@ export interface MessageCollapseProps extends MessageAppearanceProps {
   onExpandedChange?: (expanded: boolean) => void;
   ghost?: boolean;
   destroyInactivePanel?: boolean;
-  arrowPlacement?: 'start' | 'end' | 'inline';
+  arrowPlacement?: 'start' | 'end' | 'inline' | 'none';
   extra?: ReactNode;
 }
 
@@ -47,8 +47,8 @@ export function MessageCollapse({
         }}
       >
         <Collapse.Panel
-          header={arrowPlacement === 'inline' ? <span>{title}<RightOutlined className={styles.inlineArrow} rotate={isExpanded ? 90 : 0} /></span> : title}
-          showArrow={arrowPlacement !== 'inline'} extra={extra} key="content"
+          header={arrowPlacement === 'inline' ? <span>{title}<RightOutlined className={styles.inlineArrow} rotate={isExpanded ? 90 : 0} aria-hidden="true" /></span> : title}
+          showArrow={arrowPlacement !== 'inline' && arrowPlacement !== 'none'} extra={extra} key="content"
         >{children}</Collapse.Panel>
       </Collapse>
     </div>

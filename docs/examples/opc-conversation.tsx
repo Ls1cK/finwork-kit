@@ -19,7 +19,7 @@ const tasks = [
 const timeline: OpcTimelineEntry[] = [
   { id: 'opening', kind: 'leader', name: '协作团长', content: '先收集和核对议题，再据此整理简报。' },
   {
-    id: 'research-tasks', kind: 'dispatch',
+    id: 'research-tasks', kind: 'dispatch', name: '协作团长',
     assignments: [
       { id: 'collect', member: members[0].name, prompt: tasks[0].prompt, status: completed },
       { id: 'verify', member: members[0].name, prompt: tasks[1].prompt, status: completed },
@@ -47,6 +47,23 @@ export default function OpcConversation() {
   const [selectedId, setSelectedId] = useState<string>();
   const selected = tasks.find(({ id }) => id === selectedId);
 
+  const processContent = selected && (
+    <MessageContentList
+      list={[
+        { id: `${selected.id}-think`, type: 'THINK_MSG', content: selected.prompt },
+        {
+          id: `${selected.id}-tool`,
+          type: 'TOOL_CALL',
+          tool_call_name: 'WRITE_TEXT_FILE',
+          state: 'success',
+          input: { file_path: `/workspace/${selected.memberId}/output.md` },
+          output: `已写入 /workspace/${selected.memberId}/output.md`,
+        },
+      ]}
+    />
+  );
+  const isSelectedStreaming = selected?.status.status === 'running';
+
   return (
     <div style={{ display: 'grid', gap: 20 }}>
       <MessageItem role="user">
@@ -71,32 +88,20 @@ export default function OpcConversation() {
           headerAction={<button type="button" onClick={() => setSelectedId(undefined)}>关闭详情</button>}
           style={{ height: 'min(520px, 65vh)', border: '1px solid var(--finwork-border-color, #e8e8e8)' }}
         >
-          <TaskCompletedSplit
-            key={selected.id}
-            title="执行过程"
-            destroyInactivePanel
-            process={(
-              <MessageContentList
-                list={[
-                  { id: `${selected.id}-think`, type: 'THINK_MSG', content: selected.prompt },
-                  {
-                    id: `${selected.id}-tool`,
-                    type: 'TOOL_CALL',
-                    tool_call_name: 'WRITE_TEXT_FILE',
-                    state: 'success',
-                    input: { file_path: `/workspace/${selected.memberId}/output.md` },
-                    output: `已写入 /workspace/${selected.memberId}/output.md`,
-                  },
-                ]}
-              />
-            )}
-            conclusion={selected.conclusion ? (
-              <section>
-                <h3>结论</h3>
-                <StreamingMarkdownRenderer content={selected.conclusion} />
-              </section>
-            ) : <p>等待专家输出</p>}
-          />
+          {isSelectedStreaming ? processContent : (
+            <TaskCompletedSplit
+              key={selected.id}
+              title="执行过程"
+              destroyInactivePanel
+              process={processContent}
+              conclusion={selected.conclusion ? (
+                <section>
+                  <h3>结论</h3>
+                  <StreamingMarkdownRenderer content={selected.conclusion} />
+                </section>
+              ) : <p>等待专家输出</p>}
+            />
+          )}
         </OpcExpertPanel>
       )}
     </div>

@@ -64,7 +64,7 @@ export const MarkdownCodeBlock = memo(function MarkdownCodeBlock({
   );
 });
 
-async function copyToClipboard(text: string): Promise<boolean> {
+export async function copyToClipboard(text: string): Promise<boolean> {
   if (navigator.clipboard?.writeText) {
     try {
       await navigator.clipboard.writeText(text);

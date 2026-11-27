@@ -42,12 +42,16 @@ export interface ThinkContentProps extends MessageAppearanceProps {
 export const ThinkContent = memo(function ThinkContent({
   content, isStreaming = false, title, renderContent, ...collapseProps
 }: ThinkContentProps) {
-  const heading = title ?? (isStreaming ? (
-    <span className={motionStyles.thinkHeading}>
-      <span className={motionStyles.thinkShine}>正在思考中</span>
-      <span className={motionStyles.thinkDots} aria-hidden="true">...</span>
+  const heading = title ?? (
+    <span className={styles.thinkHeader}>
+      {isStreaming ? (
+        <span className={motionStyles.thinkHeading}>
+          <span className={motionStyles.thinkShine}>正在思考中</span>
+          <span className={motionStyles.thinkDots} aria-hidden="true">...</span>
+        </span>
+      ) : '已完成思考'}
     </span>
-  ) : '已完成思考');
+  );
   return (
     <MessageCollapse {...collapseProps} className={`${styles.thinkCollapse} ${collapseProps.className ?? ''}`} arrowPlacement="inline" title={heading}>
       <div className={`${styles.thinkContent} ${renderContent ? '' : styles.plainText}`} aria-busy={isStreaming}>

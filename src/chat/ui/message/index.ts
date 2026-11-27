@@ -8,6 +8,8 @@ export { MessageCollapse } from './MessageCollapse';
 export type { MessageCollapseProps } from './MessageCollapse';
 export { ThinkContent, AssistantContent, ToolCallMsg, ToolCallResponse, ContextCompressContent, AskUserQuestionContent, TaskCompletedSplit } from './Content';
 export type { ThinkContentProps, AssistantContentProps, ToolCallMsgProps, ToolCallResponseProps, ContextCompressContentProps, ContextCompressDisplayStatus, AskUserQuestionContentProps, TaskCompletedSplitProps } from './Content';
+export { ToolExecutionCard } from './ToolExecutionCard';
+export type { ToolExecutionCardProps, ToolExecutionDetail } from './ToolExecutionCard';
 export { MultiSubAgentCard, SubAgentListItem } from './SubAgent';
 export type { MultiSubAgentCardProps, SubAgentListItemProps } from './SubAgent';
 export { MessageActions, SuggestedQuestions, ChatCompletedResult } from './Actions';

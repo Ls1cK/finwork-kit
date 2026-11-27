@@ -1,11 +1,15 @@
 import { memo, type ReactNode } from 'react';
-import { MarkdownCodeBlock } from '../markdown/MarkdownCodeBlock';
+import { ApiOutlined, CodeOutlined, FunctionOutlined, ToolOutlined } from '@ant-design/icons';
+import { getCommandToolName } from '../../core-sse/commandTool';
 import type { MessageReferenceAnchor } from '../markdown/referenceAnchors';
 import {
   AssistantContent, AskUserQuestionContent, ContextCompressContent,
-  ThinkContent, ToolCallMsg, ToolCallResponse,
+  ThinkContent,
 } from './Content';
 import { MultiSubAgentCard } from './SubAgent';
+import {
+  formatToolDetail, ToolExecutionCard, type ToolExecutionDetail,
+} from './ToolExecutionCard';
 import {
   getContentCollapseKey, type MessageContent, type MessageContentExpandedProps,
   type MessageTextRenderer, type SubAgent,
@@ -35,15 +39,93 @@ export interface MessageContentItemProps<T extends MessageContent = MessageConte
   renderUnknown?: (props: MessageContentItemRenderProps<T>) => ReactNode;
 }
 
-function formatToolPayload(value: unknown): { language: string; code: string } {
-  if (typeof value === 'string') return { language: 'plaintext', code: value };
-  try {
-    const serialized = JSON.stringify(value, null, 2);
-    if (serialized !== undefined) return { language: 'json', code: serialized };
-  } catch {
-    // 含循环引用等不可序列化对象时回退为纯文本。
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+function renderCommandExecution<T extends MessageContent>({
+  item,
+  isPython,
+  isRunning,
+  expanded,
+  onExpandedChange,
+  onCopy,
+}: {
+  item: T;
+  isPython: boolean;
+  isRunning: boolean;
+  expanded?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
+  onCopy?: (text: string) => void | Promise<void>;
+}) {
+  const input = item.input;
+  const inputData = asRecord(input);
+  const field = isPython ? 'code' : 'command';
+  const inputCommand = inputData?.[field];
+  const deltaCommand = item.delta?.[field];
+  const fieldCommand =
+    (typeof inputCommand === 'string' && inputCommand) ||
+    (typeof deltaCommand === 'string' && deltaCommand) ||
+    undefined;
+  const output = item.output;
+  const outputData = asRecord(output);
+  const exitCode =
+    item.returncode ??
+    (typeof outputData?.returncode === 'number' || typeof outputData?.returncode === 'string'
+      ? outputData.returncode
+      : undefined);
+  const state = item.state;
+  const received = item.type === 'TOOL_RESPONSE' || Boolean(item.responseReceived);
+  const waiting = Boolean(item.inputComplete || item.inputEnded || input != null);
+  const failed =
+    Boolean(item.error) ||
+    Boolean(state && state !== 'success' && state !== 'completed') ||
+    ((typeof exitCode === 'number' || (typeof exitCode === 'string' && /^-?\d+$/.test(exitCode))) &&
+      Number(exitCode) !== 0);
+
+  let label = isPython ? '代码执行' : '命令执行';
+  if (received) label += failed ? '失败' : '完成';
+  else if (isRunning) label = waiting ? '等待执行结果' : '正在输入参数';
+
+  const otherInput =
+    fieldCommand && inputData ? Object.entries(inputData).filter(([key]) => key !== field) : undefined;
+  const outputDetails: ToolExecutionDetail[] = [];
+  if (received) {
+    const seen = new Set<string>();
+    for (const [key, val] of [
+      ['output', output],
+      ['stdout', item.stdout],
+      ['stderr', item.stderr],
+      ['error', item.error],
+    ] as const) {
+      const formatted = formatToolDetail(val);
+      if (!formatted || seen.has(formatted)) continue;
+      seen.add(formatted);
+      outputDetails.push({ label: key, value: formatted });
+    }
   }
-  return { language: 'plaintext', code: String(value) };
+
+  return (
+    <ToolExecutionCard
+      icon={isPython ? <FunctionOutlined aria-hidden="true" /> : <CodeOutlined aria-hidden="true" />}
+      label={label}
+      isRunning={isRunning && !received}
+      failed={received && failed}
+      details={[
+        fieldCommand ? { label: field, value: fieldCommand } : { label: 'input', value: input },
+        {
+          label: 'input',
+          value: otherInput && otherInput.length > 0 ? Object.fromEntries(otherInput) : undefined,
+        },
+        ...outputDetails,
+      ]}
+      expanded={expanded}
+      onExpandedChange={onExpandedChange}
+      onCopy={onCopy}
+    />
+  );
 }
 
 function MessageContentItemInner<T extends MessageContent>({
@@ -81,54 +163,53 @@ function MessageContentItemInner<T extends MessageContent>({
           onCopy={props.onCopy}
         />
       );
-    case 'TOOL_CALL': {
-      if (!item.tool_call_name) return null;
+    case 'TOOL_CALL':
+    case 'TOOL_RESPONSE': {
+      const command =
+        getCommandToolName(item.tool_call_name) ?? getCommandToolName(item.tool_result_name);
+      if (command) {
+        return renderCommandExecution({
+          item,
+          isPython: command === 'EXECUTE_PYTHON_CODE',
+          isRunning: props.isAnswerStreaming ?? isStreaming,
+          expanded: onContentExpandedChange ? (contentExpandedMap?.[collapseKey] ?? false) : undefined,
+          onExpandedChange: onContentExpandedChange
+            ? (next) => onContentExpandedChange(collapseKey, next)
+            : undefined,
+          onCopy: props.onCopy,
+        });
+      }
+      if (item.type !== 'TOOL_CALL' || !item.tool_call_name) return null;
+
       const rawState = item.state?.trim();
       const failedStatus = !isStreaming && rawState && rawState !== 'success' ? rawState : undefined;
       const mcp = /^mcp__(.+?)__(.+)$/.exec(item.tool_call_name);
       const label = failedStatus
         ? `${item.tool_call_name} · ${failedStatus}`
-        : mcp ? `${isStreaming ? '正在调用 MCP' : '调用 MCP 完成'} : ${mcp[1]} - ${mcp[2]}` : item.tool_call_name;
-      const streamedCommand = item.delta?.command;
-      const command = item.input === undefined && /^bash$/i.test(item.tool_call_name) &&
-        typeof streamedCommand === 'string' && streamedCommand.length ? streamedCommand : undefined;
-      const filePath = item.delta?.file_path;
-      const detail = typeof filePath === 'string' ? filePath.split(/[/\\]/).pop() : undefined;
-      const payloads = ([
-        ['input', '参数', command ?? item.input, true],
-        ['output', '输出', item.output, false],
-      ] as const).flatMap(([key, title, value, defaultExpanded]) => {
-        if (value === undefined) return [];
-        const payloadKey = `${collapseKey}_${key}`;
-        const formatted = key === 'input' && command
-          ? { language: 'shell', code: command } : formatToolPayload(value);
-        const expanded = contentExpandedMap?.[payloadKey]
-          ?? (contentExpandedMap && onContentExpandedChange ? defaultExpanded : undefined);
-        return [(
-          <MarkdownCodeBlock
-            key={payloadKey}
-            collapseKey={payloadKey}
-            title={title}
-            language={formatted.language}
-            code={formatted.code}
-            defaultExpanded={defaultExpanded}
-            expanded={expanded}
-            onExpandedChange={onContentExpandedChange
-              ? (nextExpanded) => onContentExpandedChange(payloadKey, nextExpanded)
-              : undefined}
-            onCopy={props.onCopy}
-          />
-        )];
-      });
+        : mcp
+          ? `${isStreaming ? '正在调用 MCP' : '调用 MCP 完成'} : ${mcp[1]} - ${mcp[2]}`
+          : item.tool_call_name;
+      const rawFilePath = item.delta?.file_path ?? asRecord(item.input)?.file_path;
+      const preview = typeof rawFilePath === 'string' ? rawFilePath.split(/[/\\]/).pop() : undefined;
       return (
-        <ToolCallMsg label={label} detail={detail} status={rawState} isStreaming={isStreaming}>
-          {payloads.length > 0 ? payloads : undefined}
-        </ToolCallMsg>
+        <ToolExecutionCard
+          icon={mcp ? <ApiOutlined aria-hidden="true" /> : <ToolOutlined aria-hidden="true" />}
+          label={label}
+          preview={preview}
+          isRunning={isStreaming}
+          failed={Boolean(failedStatus)}
+          details={[
+            { label: 'input', value: item.input },
+            { label: 'output', value: item.output },
+          ]}
+          expanded={onContentExpandedChange ? (contentExpandedMap?.[collapseKey] ?? false) : undefined}
+          onExpandedChange={onContentExpandedChange
+            ? (next) => onContentExpandedChange(collapseKey, next)
+            : undefined}
+          onCopy={props.onCopy}
+        />
       );
     }
-    case 'TOOL_RESPONSE':
-      return item.tool_result_name === 'Bash' && typeof item.output === 'string'
-        ? <ToolCallResponse {...expansion} content={item.output} onCopy={props.onCopy} /> : null;
     case 'SUBAGENTS':
       return (
         <MultiSubAgentCard
